@@ -17,11 +17,21 @@ class Config:
     # Секретный ключ для Flask
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
     
-    # Настройки подключения к БД
-    SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+    # 👇 ИСПРАВЛЕННЫЙ БЛОК ПОДКЛЮЧЕНИЯ К БД
+    _db_url = os.getenv('DATABASE_URL')
+    if _db_url:
+        # Render дает ссылку, начинающуюся на postgres://, 
+        # а SQLAlchemy 2.0 требует postgresql://
+        if _db_url.startswith("postgres://"):
+            _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+        SQLALCHEMY_DATABASE_URI = _db_url
+    else:
+        # Локальный запуск
+        SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+        
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # 👇 НОВОЕ: Разрешение на редактирование (по умолчанию True)
+    # 👇 Разрешение на редактирование (по умолчанию True)
     ALLOW_EDITING = os.getenv('ALLOW_EDITING', 'true').lower() == 'true'
 
 class TestConfig(Config):
