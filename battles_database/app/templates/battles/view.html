@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+
+{% block title %}{{ battle.name }} — Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+    #battle-map {
+        height: 380px;
+        border-radius: 4px;
+        border: 1px solid var(--color-border);
+    }
+    .detail-card .card-body {
+        padding: 16px 20px;
+    }
+    .detail-card dl dt {
+        font-weight: 600;
+        color: var(--color-mundir);
+        font-size: 0.85rem;
+    }
+    .detail-card dl dd {
+        font-size: 0.95rem;
+    }
+    .losses-table td {
+        padding: 4px 8px;
+    }
+    .losses-table .loss-total td {
+        font-weight: 700;
+        border-top: 1px solid var(--color-border);
+        padding-top: 8px;
+    }
+    .participant-item {
+        padding: 6px 0;
+        border-bottom: 1px solid #f0ebe0;
+        font-size: 0.9rem;
+    }
+    .participant-item:last-child {
+        border-bottom: none;
+    }
+    .participant-item .unit-name {
+        font-weight: 500;
+    }
+    .participant-item .unit-type {
+        font-size: 0.8rem;
+        color: var(--color-ash);
+        margin-left: 8px;
+    }
+    .participant-item .unit-commander {
+        font-size: 0.8rem;
+        color: var(--color-bronze);
+        margin-left: 8px;
+    }
+    .nav-tabs .nav-link {
+        color: var(--color-mundir);
+        border: none;
+        border-bottom: 2px solid transparent;
+        font-weight: 500;
+    }
+    .nav-tabs .nav-link:hover {
+        border-color: var(--color-bronze);
+    }
+    .nav-tabs .nav-link.active {
+        color: var(--color-mundir);
+        border-bottom: 2px solid var(--color-bronze);
+        background: transparent;
+    }
+    .btn-edit {
+        background: var(--color-bronze);
+        border-color: var(--color-bronze);
+        color: white;
+    }
+    .btn-edit:hover {
+        background: #a0750a;
+        border-color: #a0750a;
+        color: white;
+    }
+    .btn-delete {
+        background: transparent;
+        border-color: #8B1A1A;
+        color: #8B1A1A;
+    }
+    .btn-delete:hover {
+        background: #8B1A1A;
+        border-color: #8B1A1A;
+        color: white;
+    }
+    .btn-back {
+        background: transparent;
+        border-color: var(--color-border);
+        color: var(--color-mundir);
+    }
+    .btn-back:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+    }
+    .quote-block {
+        background: var(--color-old-paper);
+        padding: 16px 20px;
+        border-left: 4px solid var(--color-bronze);
+        border-radius: 4px;
+        font-style: italic;
+        color: #4a4a4a;
+        font-size: 0.95rem;
+    }
+    .quote-block .quote-author {
+        display: block;
+        margin-top: 8px;
+        font-style: normal;
+        font-weight: 600;
+        color: var(--color-mundir);
+    }
+    .size-table td {
+        padding: 4px 8px;
+    }
+    .size-table .size-total td {
+        font-weight: 700;
+        border-top: 1px solid var(--color-border);
+        padding-top: 8px;
+    }
+    .trophy-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        border-bottom: 1px solid #f0ebe0;
+        font-size: 0.9rem;
+    }
+    .trophy-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Стили для схем */
+    .diagram-card {
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .diagram-card img {
+        cursor: pointer;
+        transition: transform 0.3s;
+        width: 100%;
+        max-height: 250px;
+        object-fit: contain;
+        background: #faf8f2;
+    }
+    .diagram-card img:hover {
+        transform: scale(1.02);
+    }
+
+    /* Модальное окно для схем */
+    #diagramModal .modal-dialog {
+        max-width: 90%;
+    }
+    #modalDiagramImage {
+        max-height: 80vh;
+        object-fit: contain;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    {{ battle.name }}
+                    <small class="text-muted" style="font-family: 'Inter', sans-serif; font-weight: 300; font-size: 1rem;">
+                        {{ battle.date_begin }}{% if battle.date_end and battle.date_end != battle.date_begin %} — {{ battle.date_end }}{% endif %}
+                    </small>
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('battles.list_battles') }}">Сражения</a></li>
+                    <li class="breadcrumb-item active">{{ battle.name }}</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+
+        <!-- Кнопки управления -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <a href="{{ url_for('battles.list_battles') }}" class="btn btn-back">
+                    <i class="fas fa-arrow-left"></i> К списку
+                </a>
+                <a href="{{ url_for('battles.edit_battle', id=battle.id) }}" class="btn btn-edit" style="margin-left: 8px;">
+                    <i class="fas fa-edit"></i> Редактировать
+                </a>
+                <form action="{{ url_for('battles.delete_battle', id=battle.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-delete" style="margin-left: 8px;" onclick="return confirm('Вы уверены?')">
+                        <i class="fas fa-trash"></i> Удалить
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+
+            <!-- Левая колонка -->
+            <div class="col-lg-6">
+
+                <!-- Карта -->
+                {% if battle.place and battle.place.latitude and battle.place.longitude %}
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-map"></i> Место сражения
+                    </div>
+                    <div class="card-body">
+                        <div id="battle-map"></div>
+                        <p class="mt-2 text-muted" style="font-size: 0.85rem;">
+                            <i class="fas fa-location-dot" style="color: var(--color-bronze);"></i>
+                            {{ battle.place.name }}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Описание -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-align-left"></i> Описание
+                    </div>
+                    <div class="card-body">
+                        {% if battle.description %}
+                            <p>{{ battle.description }}</p>
+                        {% else %}
+                            <p class="text-muted">Описание отсутствует</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Схемы сражения -->
+                {% if battle.diagrams %}
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-image"></i> Схемы сражения
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for diagram in battle.diagrams %}
+                            <div class="col-md-6 mb-3">
+                                <div class="diagram-card">
+                                    <img src="{{ url_for('static', filename='uploads/battle_diagrams/' + diagram.filename) }}"
+                                         alt="Схема сражения"
+                                         onclick="openDiagramModal(this)">
+                                    <div class="p-2">
+                                        {% if diagram.is_main %}
+                                            <span class="badge bg-primary mb-1">Основная схема</span>
+                                        {% endif %}
+                                        {% if diagram.description %}
+                                            <p class="mb-0" style="font-size: 0.85rem;">{{ diagram.description }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <!-- Правая колонка -->
+            <div class="col-lg-6">
+
+                <!-- Основная информация -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle"></i> Основная информация
+                    </div>
+                    <div class="card-body">
+                        <dl class="row" style="margin-bottom: 0;">
+                            <dt class="col-sm-5">Дата начала</dt>
+                            <dd class="col-sm-7">{{ battle.date_begin }}</dd>
+                            <dt class="col-sm-5">Дата окончания</dt>
+                            <dd class="col-sm-7">{{ battle.date_end if battle.date_end else '—' }}</dd>
+                            <dt class="col-sm-5">Место</dt>
+                            <dd class="col-sm-7">{{ battle.place.name if battle.place else '—' }}</dd>
+                            <dt class="col-sm-5">Победитель</dt>
+                            <dd class="col-sm-7">
+                                {% if battle.victory %}
+                                    {{ battle.victory }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- Численность сторон -->
+                {% if french_size or allied_size %}
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-users"></i> Численность сторон
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 style="font-family: 'Playfair Display', serif; font-weight: 700; color: var(--color-mundir);">
+                                    <span class="badge badge-france">Франция</span>
+                                </h6>
+                                {% if french_size %}
+                                <table class="table table-sm table-borderless size-table">
+                                    {% if french_size.men %}<tr><td>Человек</td><td class="text-end"><strong>{{ french_size.men }}</strong></td></tr>{% endif %}
+                                    {% if french_size.guns %}<tr><td>Орудий</td><td class="text-end"><strong>{{ french_size.guns }}</strong></td></tr>{% endif %}
+                                    {% if french_size.bns %}<tr><td>Батальонов</td><td class="text-end"><strong>{{ french_size.bns }}</strong></td></tr>{% endif %}
+                                    {% if french_size.coys %}<tr><td>Рот</td><td class="text-end"><strong>{{ french_size.coys }}</strong></td></tr>{% endif %}
+                                    {% if french_size.sqns %}<tr><td>Эскадронов</td><td class="text-end"><strong>{{ french_size.sqns }}</strong></td></tr>{% endif %}
+                                </table>
+                                {% if french_size.source %}
+                                <small class="text-muted">Источник: {{ french_size.source.title }}{% if french_size.source.author %} ({{ french_size.source.author }}){% endif %}</small>
+                                {% endif %}
+                                {% else %}
+                                <p class="text-muted" style="font-size: 0.85rem;">Нет данных</p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <h6 style="font-family: 'Playfair Display', serif; font-weight: 700; color: var(--color-mundir);">
+                                    <span class="badge badge-russia">Союзники</span>
+                                </h6>
+                                {% if allied_size %}
+                                    {% for entry in allied_size %}
+                                    <div class="mb-2">
+                                        <strong style="font-size: 0.85rem;">{{ entry.country.name }}</strong>
+                                        <table class="table table-sm table-borderless size-table">
+                                            {% if entry.men %}<tr><td>Человек</td><td class="text-end"><strong>{{ entry.men }}</strong></td></tr>{% endif %}
+                                            {% if entry.guns %}<tr><td>Орудий</td><td class="text-end"><strong>{{ entry.guns }}</strong></td></tr>{% endif %}
+                                            {% if entry.bns %}<tr><td>Батальонов</td><td class="text-end"><strong>{{ entry.bns }}</strong></td></tr>{% endif %}
+                                            {% if entry.coys %}<tr><td>Рот</td><td class="text-end"><strong>{{ entry.coys }}</strong></td></tr>{% endif %}
+                                            {% if entry.sqns %}<tr><td>Эскадронов</td><td class="text-end"><strong>{{ entry.sqns }}</strong></td></tr>{% endif %}
+                                        </table>
+                                        {% if entry.source %}
+                                        <small class="text-muted">Источник: {{ entry.source.title }}{% if entry.source.author %} ({{ entry.source.author }}){% endif %}</small>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                <p class="text-muted" style="font-size: 0.85rem;">Нет данных</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Участники -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-sitemap"></i> Участники сражения
+                    </div>
+                    <div class="card-body">
+                        <ul class="nav nav-tabs" id="participantsTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="france-tab" data-bs-toggle="tab" data-bs-target="#france" type="button" role="tab">
+                                    <span class="badge badge-france">Франция</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="allies-tab" data-bs-toggle="tab" data-bs-target="#allies" type="button" role="tab">
+                                    <span class="badge badge-russia">Союзники</span>
+                                </button>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="participantsTabContent" style="padding-top: 12px;">
+                            <div class="tab-pane fade show active" id="france" role="tabpanel">
+                                {% for p in french_participants %}
+                                    <div class="participant-item">
+                                        {% if p.unit %}
+                                            <a href="{{ url_for('units.view_unit', id=p.unit.id) }}" class="text-decoration-none">
+                                                <span class="unit-name">{{ p.unit.get_full_hierarchy_name(battle.date_begin) }}</span>
+                                            </a>
+                                        {% else %}
+                                            <span class="unit-name text-muted">Подразделение не указано</span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted" style="font-size: 0.85rem;">Нет участников из Франции</p>
+                                {% endfor %}
+                            </div>
+                            <div class="tab-pane fade" id="allies" role="tabpanel">
+                                {% for p in other_participants %}
+                                    <div class="participant-item">
+                                        {% if p.unit %}
+                                            <a href="{{ url_for('units.view_unit', id=p.unit.id) }}" class="text-decoration-none">
+                                                <span class="unit-name">{{ p.unit.get_full_hierarchy_name(battle.date_begin) }}</span>
+                                            </a>
+                                        {% else %}
+                                            <span class="unit-name text-muted">Подразделение не указано</span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted" style="font-size: 0.85rem;">Нет других участников</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Потери -->
+                {% if french_losses or allied_losses %}
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-skull"></i> Потери
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 style="font-family: 'Playfair Display', serif; font-weight: 700; color: var(--color-mundir);">
+                                    <span class="badge badge-france">Франция</span>
+                                </h6>
+                                {% if french_losses %}
+                                    {% for entry in french_losses %}
+                                    <div class="mb-2">
+                                        <strong style="font-size: 0.85rem;">{{ entry.country.name }}</strong>
+                                        <table class="table table-sm table-borderless losses-table">
+                                            {% if entry.data.killed is not none and entry.data.killed > 0 %}
+                                                <tr><td>Убитые</td><td class="text-end"><span style="color: #8B1A1A;">{{ entry.data.killed }}</span></td></tr>
+                                            {% endif %}
+                                            {% if entry.data.wounded is not none and entry.data.wounded > 0 %}
+                                                <tr><td>Раненые</td><td class="text-end"><span style="color: #B8860B;">{{ entry.data.wounded }}</span></td></tr>
+                                            {% endif %}
+                                            {% if entry.data.captured is not none and entry.data.captured > 0 %}
+                                                <tr><td>Пленные</td><td class="text-end"><span style="color: var(--color-ash);">{{ entry.data.captured }}</span></td></tr>
+                                            {% endif %}
+                                            {% if entry.data.missing is not none and entry.data.missing > 0 %}
+                                                <tr><td>Пропавшие без вести</td><td class="text-end"><span style="color: var(--color-ash);">{{ entry.data.missing }}</span></td></tr>
+                                            {% endif %}
+                                            {% if entry.data.killed_wounded is not none and entry.data.killed_wounded > 0 %}
+                                                <tr><td>Убитые + раненые</td><td class="text-end"><span>{{ entry.data.killed_wounded }}</span></td></tr>
+                                            {% endif %}
+                                        </table>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted" style="font-size: 0.85rem;">Нет данных о потерях</p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <h6 style="font-family: 'Playfair Display', serif; font-weight: 700; color: var(--color-mundir);">
+                                    <span class="badge badge-russia">Союзники</span>
+                                </h6>
+                                {% if allied_losses %}
+                                    {% for entry in allied_losses %}
+                                    <div class="mb-2">
+                                        <strong style="font-size: 0.85rem;">{{ entry.country.name }}</strong>
+                                        <table class="table table-sm table-borderless losses-table">
+                                            {% if entry.data.killed is not none and entry.data.killed > 0 %}
+                                                <tr><td>Убитые</td><td class="text-end"><span style="color: #8B1A1A;">{{ entry.data.killed }}</span></td></tr>
+                                            {% endif %}
+                                            {% if entry.data.wounded is not none and entry.data.wounded > 0 %}
+                                                <tr><td>Раненые</td><td class="text-end"><span style="color: #B8860B;">{{ entry.data.wounded }}</span></td></tr>
+                                            {% endif %}
+                                            {% if entry.data.captured is not none and entry.data.captured > 0 %}
+                                                <tr><td>Пленные</td><td class="text-end"><span style="color: var(--color-ash);">{{ entry.data.captured }}</span></td></tr>
+                                            {% endif %}
+                                            {% if entry.data.missing is not none and entry.data.missing > 0 %}
+                                                <tr><td>Пропавшие без вести</td><td class="text-end"><span style="color: var(--color-ash);">{{ entry.data.missing }}</span></td></tr>
+                                            {% endif %}
+                                            {% if entry.data.killed_wounded is not none and entry.data.killed_wounded > 0 %}
+                                                <tr><td>Убитые + раненые</td><td class="text-end"><span>{{ entry.data.killed_wounded }}</span></td></tr>
+                                            {% endif %}
+                                        </table>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted" style="font-size: 0.85rem;">Нет данных о потерях</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Трофеи -->
+                {% if trophies|length > 0 %}
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-trophy"></i> Трофеи
+                    </div>
+                    <div class="card-body">
+                        {% for trophy in trophies %}
+                        <div class="trophy-item">
+                            <span>
+                                <i class="fas fa-box"></i> {{ trophy.type }}
+                                {% if trophy.captor %}
+                                    <small class="text-muted">({{ trophy.captor.name }})</small>
+                                {% endif %}
+                            </span>
+                            <span><strong>{{ trophy.quantity }}</strong></span>
+                        </div>
+                        {% if trophy.description %}
+                        <div style="font-size: 0.8rem; color: var(--color-ash); padding-bottom: 4px;">
+                            {{ trophy.description }}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Модальное окно для схем -->
+<div class="modal fade" id="diagramModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Схема сражения</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalDiagramImage" src="" class="img-fluid" alt="">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Карта
+    {% if battle.place and battle.place.latitude and battle.place.longitude %}
+    var map = L.map('battle-map').setView([{{ battle.place.latitude }}, {{ battle.place.longitude }}], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    var marker = L.marker([{{ battle.place.latitude }}, {{ battle.place.longitude }}], {
+        icon: L.divIcon({
+            html: '<div style="background: #8B1A1A; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #f5c842; box-shadow: 0 0 10px rgba(139, 26, 26, 0.3);"></div>',
+            className: '',
+            iconSize: [18, 18]
+        })
+    }).addTo(map);
+    marker.bindPopup('<b>{{ battle.name }}</b><br>{{ battle.date_begin }}');
+    marker.openPopup();
+    {% endif %}
+
+    // Модальное окно для схем
+    function openDiagramModal(imgElement) {
+        var modal = new bootstrap.Modal(document.getElementById('diagramModal'));
+        document.getElementById('modalDiagramImage').src = imgElement.src;
+        modal.show();
+    }
+    window.openDiagramModal = openDiagramModal;
+</script>
+{% endblock %}

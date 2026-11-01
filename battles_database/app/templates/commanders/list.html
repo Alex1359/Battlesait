@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Офицеры — Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ---------- ФИЛЬТРЫ ---------- */
+    .filter-section {
+        background: var(--color-old-paper);
+        padding: 16px 20px;
+        border-radius: 4px;
+        border: 1px solid var(--color-border);
+        margin-bottom: 20px;
+    }
+    .filter-section .filter-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--color-mundir);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+        display: block;
+    }
+    .filter-section .form-control,
+    .filter-section .form-select {
+        border-color: var(--color-border);
+        border-radius: 4px;
+        font-size: 0.9rem;
+        background: var(--color-white);
+    }
+    .filter-section .form-control:focus,
+    .filter-section .form-select:focus {
+        border-color: var(--color-bronze);
+        box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
+    }
+    .filter-section .btn-filter {
+        background: var(--color-mundir);
+        border-color: var(--color-mundir);
+        color: white;
+    }
+    .filter-section .btn-filter:hover {
+        background: var(--color-bronze);
+        border-color: var(--color-bronze);
+    }
+    .filter-section .btn-reset {
+        background: transparent;
+        border-color: var(--color-border);
+        color: var(--color-mundir);
+    }
+    .filter-section .btn-reset:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+    }
+
+    /* ---------- КАРТОЧКИ ОФИЦЕРОВ ---------- */
+    .officer-card {
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        background: var(--color-white);
+        height: 100%;
+    }
+    .officer-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        border-color: var(--color-bronze);
+    }
+    .officer-card .card-body {
+        padding: 16px 20px;
+    }
+    .officer-card .officer-name {
+        font-family: 'Playfair Display', serif;
+        font-weight: 700;
+        color: var(--color-mundir);
+        font-size: 1.1rem;
+        line-height: 1.2;
+        margin-bottom: 4px;
+    }
+    .officer-card .officer-rank {
+        font-size: 0.85rem;
+        color: var(--color-bronze);
+        font-weight: 500;
+    }
+    .officer-card .officer-years {
+        font-size: 0.85rem;
+        color: var(--color-ash);
+        margin-top: 4px;
+    }
+    .officer-card .officer-country {
+        margin-top: 8px;
+    }
+
+    /* ---------- БЕЙДЖИ СТРАН (расширенная палитра) ---------- */
+    .badge-winner-france,
+    .badge-winner-spain,
+    .badge-winner-portugal,
+    .badge-winner-unknown,
+    .badge-winner-other {
+        padding: 4px 12px;
+        border-radius: 3px;
+        font-weight: 500;
+        font-size: 0.75rem;
+        display: inline-block;
+    }
+    .badge-winner-france   { background: #1A2A3A; color: white; }
+    .badge-winner-spain    { background: #D4A017; color: #1A2A3A; }
+    .badge-winner-portugal { background: #2D6A2D; color: white; }
+    .badge-winner-unknown  { background: #8C8C8C; color: white; }
+    .badge-winner-other    { background: #8B1A1A; color: white; }
+
+    /* ---------- ПАГИНАЦИЯ ---------- */
+    .pagination .page-link {
+        border-color: var(--color-border);
+        color: var(--color-mundir);
+    }
+    .pagination .page-link:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+        color: var(--color-mundir);
+    }
+    .pagination .page-item.active .page-link {
+        background: var(--color-bronze);
+        border-color: var(--color-bronze);
+        color: white;
+    }
+    .pagination .page-item.disabled .page-link {
+        color: var(--color-ash);
+        border-color: var(--color-border);
+    }
+
+    /* ---------- КНОПКИ ---------- */
+    .btn-edit {
+        background: var(--color-bronze);
+        border-color: var(--color-bronze);
+        color: white;
+    }
+    .btn-edit:hover {
+        background: #a0750a;
+        border-color: #a0750a;
+        color: white;
+    }
+
+    /* ---------- СТАТИСТИКА ---------- */
+    .stats-bar {
+        background: var(--color-old-paper);
+        padding: 12px 20px;
+        border-radius: 4px;
+        border: 1px solid var(--color-border);
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    Офицеры Наполеоновских войн
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item active">Офицеры</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+
+        <!-- Фильтры -->
+        <div class="filter-section">
+            <form method="GET" action="{{ url_for('commanders.list_commanders') }}">
+                <div class="row align-items-end g-2">
+                    <div class="col-md-4">
+                        <label class="filter-label" for="last_name">Фамилия</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name"
+                               value="{{ request.args.get('last_name', '') }}"
+                               placeholder="Введите фамилию...">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="filter-label" for="country">Страна</label>
+                        <select class="form-select" id="country" name="country">
+                            <option value="">Все страны</option>
+                            {% for country in countries %}
+                                <option value="{{ country.id }}"
+                                    {% if request.args.get('country')|int == country.id %}selected{% endif %}>
+                                    {{ country.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-filter w-100">
+                                <i class="fas fa-filter"></i> Фильтровать
+                            </button>
+                            <a href="{{ url_for('commanders.list_commanders') }}" class="btn btn-reset" title="Сбросить">
+                                <i class="fas fa-xmark"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        {% if commanders.items %}
+            <!-- Статистика (опционально — если передаётся в контекст) -->
+            {% if stats %}
+            <div class="stats-bar">
+                <span><i class="fas fa-users" style="color: var(--color-bronze);"></i> Всего: <strong>{{ stats.total }}</strong> офицеров</span>
+                {% for s in stats.by_country %}
+                    <span><i class="fas fa-flag" style="color: var(--color-bronze);"></i> {{ s.name }}: <strong>{{ s.count }}</strong></span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Список офицеров -->
+            <div class="row g-3">
+                {% for commander in commanders.items %}
+                <div class="col-md-4 col-lg-3">
+                    <div class="card officer-card" onclick="window.location.href='{{ url_for('commanders.view_commander', id=commander.id) }}'">
+                        <div class="card-body">
+                            <div class="officer-name">{{ commander.last_name }}<br>{{ commander.first_name }}</div>
+                            <div class="officer-rank">
+                                {% if commander_rank_history_map and commander_rank_history_map.get(commander.id) %}
+                                    {{ commander_rank_history_map[commander.id] }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </div>
+                            <div class="officer-years">
+                                <i class="far fa-calendar-alt"></i>
+                                {{ commander.birth_date.strftime('%Y') if commander.birth_date else '?' }}
+                                –
+                                {{ commander.death_date.strftime('%Y') if commander.death_date else '?' }}
+                            </div>
+                            <div class="officer-country">
+                                {% if commander.country %}
+                                    {% set c = commander.country.name|lower %}
+                                    {% if 'франц' in c or 'france' in c %}
+                                        <span class="badge-winner-france">{{ commander.country.name }}</span>
+                                    {% elif 'испан' in c or 'spain' in c %}
+                                        <span class="badge-winner-spain">{{ commander.country.name }}</span>
+                                    {% elif 'португ' in c or 'portug' in c %}
+                                        <span class="badge-winner-portugal">{{ commander.country.name }}</span>
+                                    {% elif 'британ' in c or 'british' in c %}
+                                        <span class="badge-winner-other">{{ commander.country.name }}</span>
+                                    {% else %}
+                                        <span class="badge-winner-other">{{ commander.country.name }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge-winner-unknown">Неизвестно</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Пагинация -->
+            {% if commanders.pages > 1 %}
+                {% with pagination=commanders, endpoint='commanders.list_commanders', params=request.args.to_dict() %}
+                    {% include "partials/_pagination.html" %}
+                {% endwith %}
+            {% endif %}
+
+            <div class="text-center text-muted mt-2" style="font-size: 0.85rem;">
+                Показано: {{ commanders.items|length }} из {{ commanders.total }} офицеров
+            </div>
+
+        {% else %}
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle"></i> Нет офицеров, соответствующих выбранным фильтрам.
+            </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Подсветка активных фильтров
+    $('select[name="country"], input[name="last_name"]').each(function() {
+        if ($(this).val()) {
+            $(this).addClass('is-valid');
+        }
+    });
+});
+</script>
+{% endblock %}

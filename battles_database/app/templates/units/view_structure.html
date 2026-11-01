@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Структура: {{ unit.name }} — Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Стили для выбора даты */
+    .date-control {
+        background: var(--color-old-paper);
+        border: 1px solid var(--color-border);
+        padding: 15px 20px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    /* --- СТИЛИ ДЛЯ ДЕРЕВА --- */
+    .tree-wrapper {
+        overflow-x: auto;
+        padding: 40px 20px;
+        background: var(--color-white);
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        text-align: center;
+    }
+
+    .tree {
+        display: inline-block;
+        text-align: left;
+    }
+
+    .tree ul {
+        padding-top: 20px;
+        position: relative;
+        transition: all 0.5s;
+        display: flex;
+        justify-content: center;
+        padding-left: 0;
+    }
+
+    .tree li {
+        float: left;
+        text-align: center;
+        list-style-type: none;
+        position: relative;
+        padding: 20px 5px 0 5px;
+        transition: all 0.5s;
+    }
+
+    /* Рисуем соединительные линии */
+    .tree li::before, .tree li::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 50%;
+        border-top: 2px solid var(--color-border);
+        width: 50%;
+        height: 20px;
+    }
+    .tree li::after {
+        right: auto;
+        left: 50%;
+        border-left: 2px solid var(--color-border);
+    }
+
+    /* Убираем линии у единственного ребенка */
+    .tree li:only-child::after, .tree li:only-child::before {
+        display: none;
+    }
+    .tree li:only-child {
+        padding-top: 0;
+    }
+
+    /* Убираем линию слева у первого и справа у последнего */
+    .tree li:first-child::before, .tree li:last-child::after {
+        border: 0 none;
+    }
+    /* Добавляем вертикальную линию к последнему */
+    .tree li:last-child::before {
+        border-right: 2px solid var(--color-border);
+        border-radius: 0 5px 0 0;
+    }
+    .tree li:first-child::after {
+        border-radius: 5px 0 0 0;
+    }
+
+    /* Ветка вниз */
+    .tree ul ul::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        border-left: 2px solid var(--color-border);
+        width: 0;
+        height: 20px;
+    }
+
+    /* Карточка узла */
+    .tree .node {
+        display: inline-block;
+        background: var(--color-white);
+        border: 2px solid #8B1A1A; /* Красная рамка как на картинке */
+        padding: 10px 15px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        text-decoration: none;
+        color: var(--color-mundir);
+        min-width: 120px;
+        transition: all 0.3s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .tree .node:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+        transform: scale(1.05);
+    }
+
+    .tree .node .node-title {
+        font-weight: 700;
+        font-family: 'Playfair Display', serif;
+        font-size: 0.95rem;
+        margin-bottom: 4px;
+    }
+
+    .tree .node .node-commander {
+        font-size: 0.75rem;
+        color: var(--color-bronze);
+        font-style: italic;
+    }
+    
+    .tree .node .node-type {
+        font-size: 0.7rem;
+        color: var(--color-ash);
+        text-transform: uppercase;
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    Структура: {{ unit.name }}
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('units.list_units') }}">Подразделения</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('units.view_unit', id=unit.id) }}">{{ unit.name }}</a></li>
+                    <li class="breadcrumb-item active">Структура</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col-12">
+                <a href="{{ url_for('units.view_unit', id=unit.id) }}" class="btn btn-cancel">
+                    <i class="fas fa-arrow-left"></i> К подразделению
+                </a>
+                <a href="{{ url_for('units.view_strength', id=unit.id) }}" class="btn btn-outline-primary ms-2">
+                    <i class="fas fa-chart-line"></i> Численность
+                </a>
+            </div>
+        </div>
+
+        <!-- Выбор даты -->
+        <div class="date-control">
+            <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Структура на дату:</h5>
+            <form method="GET" action="{{ url_for('units.view_structure', id=unit.id) }}" class="d-flex gap-2">
+                <input type="date" name="date" class="form-control" value="{{ current_date }}" style="width: 200px;">
+                <button type="submit" class="btn btn-primary">Показать</button>
+            </form>
+            <div class="ms-auto text-muted small">
+                Показаны подразделения, входившие в состав на выбранную дату.
+            </div>
+        </div>
+
+        <!-- Дерево -->
+        <div class="tree-wrapper">
+            <div class="tree">
+                <ul>
+                    <li>
+                        <!-- Рекурсивный макрос для вывода узлов -->
+                        {% macro render_node(node) %}
+                            <div class="node">
+                                <a href="{{ url_for('units.view_unit', id=node.id) }}" class="text-decoration-none" style="color: inherit;">
+                                    <div class="node-title">{{ node.name }}</div>
+                                </a>
+                                {% if node.commander %}
+                                    <div class="node-commander">{{ node.commander }}</div>
+                                {% endif %}
+                                <div class="node-type">{{ node.type }}</div>
+                            </div>
+                            
+                            {% if node.children %}
+                                <ul>
+                                    {% for child in node.children %}
+                                        <li>
+                                            {{ render_node(child) }}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        {% endmacro %}
+
+                        <!-- Запуск рендера с корневого узла -->
+                        {{ render_node(tree_data) }}
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        {% if not tree_data.children %}
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle"></i> На выбранную дату у этого подразделения нет подчинённых частей в базе данных.
+            </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}

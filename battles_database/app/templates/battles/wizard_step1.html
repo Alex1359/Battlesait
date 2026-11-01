@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Новое сражение (шаг 1) — Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<style>
+    /* ---------- ФОРМА ---------- */
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--color-mundir);
+        margin-bottom: 4px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #8B1A1A;
+    }
+    .form-control, .form-select {
+        border-color: var(--color-border);
+        border-radius: 4px;
+        font-size: 0.9rem;
+        background: var(--color-white);
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: var(--color-bronze);
+        box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
+    }
+    textarea.form-control {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    /* ---------- SELECT2 ---------- */
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        padding: 5px;
+        border-color: var(--color-border);
+        border-radius: 4px;
+        background: var(--color-white);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 26px;
+        color: var(--color-mundir);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: var(--color-bronze);
+        box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
+    }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: var(--color-bronze);
+        color: white;
+    }
+
+    /* ---------- ПРОГРЕСС ---------- */
+    .wizard-progress {
+        margin-top: 16px;
+    }
+    .wizard-progress .progress {
+        height: 5px;
+        background: var(--color-old-paper);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .wizard-progress .progress-bar {
+        background: var(--color-bronze);
+    }
+    .wizard-progress .steps-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-size: 0.85rem;
+    }
+    .wizard-progress .steps-labels span {
+        color: var(--color-ash);
+    }
+    .wizard-progress .steps-labels span.active {
+        color: var(--color-bronze);
+        font-weight: 700;
+        font-family: 'Playfair Display', serif;
+    }
+
+    /* ---------- КНОПКИ ---------- */
+    .btn-next {
+        background: var(--color-bronze);
+        border: 1px solid var(--color-bronze);
+        color: white;
+        font-weight: 500;
+        padding: 8px 24px;
+    }
+    .btn-next:hover {
+        background: #a0750a;
+        border-color: #a0750a;
+        color: white;
+    }
+    .btn-cancel {
+        background: transparent;
+        border: 1px solid var(--color-border);
+        color: var(--color-mundir);
+    }
+    .btn-cancel:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+        color: var(--color-mundir);
+    }
+
+    /* ---------- ПОДСКАЗКИ ---------- */
+    #place-coordinates {
+        font-size: 0.8rem;
+        color: var(--color-ash);
+        margin-top: 4px;
+        display: block;
+    }
+    .field-hint {
+        font-size: 0.75rem;
+        color: var(--color-ash);
+        margin-top: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    Новое сражение
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('battles.list_battles') }}">Сражения</a></li>
+                    <li class="breadcrumb-item active">Новое</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card detail-card">
+
+            <!-- Шапка с прогресс-баром -->
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-plus-circle"></i> Добавление сражения
+                </h3>
+                <div class="wizard-progress">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 33%"
+                             aria-valuenow="33" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="steps-labels">
+                        <span class="active">1. Основная информация</span>
+                        <span>2. Участники</span>
+                        <span>3. Потери и трофеи</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('battles.new_battle') }}" novalidate id="new-battle-form">
+                    <input type="hidden" name="step" value="1">
+                    {% include "partials/_form_errors.html" %}
+
+                    <!-- Название -->
+                    <div class="mb-3">
+                        <label for="name" class="form-label required">Название сражения</label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                               value="{{ battle_data.name if battle_data and battle_data.name }}">
+                    </div>
+
+                    <!-- Даты -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="date_begin" class="form-label required">Дата начала</label>
+                            <input type="date" class="form-control" id="date_begin" name="date_begin" required
+                                   value="{{ battle_data.date_begin if battle_data and battle_data.date_begin }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="date_end" class="form-label">Дата окончания</label>
+                            <input type="date" class="form-control" id="date_end" name="date_end"
+                                   value="{{ battle_data.date_end if battle_data and battle_data.date_end }}">
+                        </div>
+                    </div>
+
+                    <!-- Место -->
+                    <div class="mb-3">
+                        <label for="place_id" class="form-label">Место сражения</label>
+                        <select class="form-select select2" id="place_id" name="place_id">
+                            <option value="">— Выберите место —</option>
+                            {% for place in places %}
+                                <option value="{{ place.id }}"
+                                    {% if battle_data and battle_data.place_id|string == place.id|string %}selected{% endif %}>
+                                    {{ place.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small id="place-coordinates" class="form-text">
+                            Координаты выбранного места будут показаны здесь
+                        </small>
+                    </div>
+
+                    <!-- Победитель -->
+                    <div class="mb-3">
+                        <label for="victory" class="form-label required">Победитель</label>
+                        <input type="text" class="form-control" id="victory" name="victory" required
+                               value="{{ battle_data.victory if battle_data and battle_data.victory }}">
+                        <small class="field-hint">
+                            Используйте: <code>french</code>, <code>Spanish</code>, <code>Portuguese</code>,
+                            <code>British</code>, <code>allied</code>, <code>undecided</code> — для цвета бейджа.
+                        </small>
+                    </div>
+
+                    <!-- Описание -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Описание</label>
+                        <textarea class="form-control" id="description" name="description" rows="5">{{ battle_data.description if battle_data and battle_data.description }}</textarea>
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('battles.list_battles') }}" class="btn btn-cancel">
+                            <i class="fas fa-times"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-next">
+                            Далее <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/ru.js"></script>
+<script>
+$(document).ready(function() {
+    // ============ SELECT2 ============
+    $('.select2').select2({ language: 'ru', width: '100%' });
+
+    // ============ ПОДСКАЗКА ПО КООРДИНАТАМ ============
+    // Если у вас передаются координаты для мест — можно показать при выборе.
+    // Пример (раскомментируйте, если place_coords есть в контексте):
+    /*
+    const placeCoords = {{ place_coords|tojson|safe if place_coords else '{}' }};
+    $('#place_id').on('change', function() {
+        const id = $(this).val();
+        if (id && placeCoords[id]) {
+            $('#place-coordinates').text(
+                `Широта: ${placeCoords[id][0]}, Долгота: ${placeCoords[id][1]}`
+            );
+        } else {
+            $('#place-coordinates').text('Координаты выбранного места будут показаны здесь');
+        }
+    });
+    */
+
+    // ============ ВАЛИДАЦИЯ ============
+    $('#new-battle-form').on('submit', function (e) {
+        let isValid = true;
+
+        $('.is-invalid').removeClass('is-invalid');
+        $('.invalid-feedback').remove();
+
+        $('.required').each(function () {
+            const input = $(this).is('label') ? $('#' + $(this).attr('for')) : $(this);
+            if (!input.val()) {
+                isValid = false;
+                input.addClass('is-invalid');
+                input.after('<div class="invalid-feedback d-block">Это поле обязательно для заполнения</div>');
+            }
+        });
+
+        const startDate = $('#date_begin').val();
+        const endDate = $('#date_end').val();
+        if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+            $('#date_end').addClass('is-invalid');
+            $('#date_end').after('<div class="invalid-feedback d-block">Дата окончания не может быть раньше даты начала</div>');
+            isValid = false;
+        }
+
+        if (!isValid) {
+            e.preventDefault();
+            const first = document.querySelector('.is-invalid');
+            if (first) {
+                window.scrollTo({ top: first.offsetTop - 100, behavior: 'smooth' });
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

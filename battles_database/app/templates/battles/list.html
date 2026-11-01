@@ -1,0 +1,595 @@
+{% extends "base.html" %}
+
+{% block title %}Сражения — Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15.5.1/dist/nouislider.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+<style>
+    #map {
+        height: 500px;
+        border-radius: 4px;
+        border: 1px solid var(--color-border);
+    }
+    .map-table-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    @media (min-width: 992px) {
+        .map-table-container {
+            flex-direction: row;
+        }
+        .map-table-container .table-container {
+            flex: 1;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .map-table-container .map-container {
+            flex: 1;
+            min-height: 500px;
+            position: relative;
+        }
+    }
+    .table-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    .table-container::-webkit-scrollbar-track {
+        background: var(--color-old-paper);
+    }
+    .table-container::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+        border-radius: 3px;
+    }
+    .table-container::-webkit-scrollbar-thumb:hover {
+        background: var(--color-bronze);
+    }
+    .table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .btn-sm {
+        padding: 2px 8px;
+        font-size: 0.75rem;
+    }
+    .btn-outline-info {
+        color: var(--color-mundir);
+        border-color: var(--color-border);
+    }
+    .btn-outline-info:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+    }
+    .btn-outline-warning {
+        color: var(--color-bronze);
+        border-color: var(--color-border);
+    }
+    .btn-outline-warning:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+    }
+    .btn-outline-danger {
+        color: #8B1A1A;
+        border-color: var(--color-border);
+    }
+    .btn-outline-danger:hover {
+        background: #8B1A1A;
+        color: white;
+        border-color: #8B1A1A;
+    }
+
+    /* Временная шкала */
+    .timeline-slider-container {
+        padding: 10px 4px 30px;
+    }
+    .noUi-handle {
+        height: 18px;
+        width: 18px;
+        top: -7px;
+    }
+    .noUi-connect {
+        background: var(--color-bronze);
+    }
+    .noUi-target {
+        background: var(--color-old-paper);
+        border: 1px solid var(--color-border);
+        box-shadow: none;
+    }
+    .noUi-tooltip {
+        display: none;
+        opacity: 1;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+    .noUi-handle:active .noUi-tooltip,
+    .noUi-handle-active .noUi-tooltip {
+        display: block;
+    }
+    .timeline-pips-container {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+        position: relative;
+        height: 30px;
+    }
+    .timeline-pip {
+        position: relative;
+        width: 11.11%;
+        text-align: center;
+    }
+    .timeline-pip::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        width: 1px;
+        height: 16px;
+        background: #555;
+        transform: translateX(-50%);
+    }
+    .timeline-pip span {
+        position: absolute;
+        top: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.85rem;
+        color: #555;
+        white-space: nowrap;
+    }
+
+    /* Полноэкранный режим */
+    .fullscreen-btn {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        z-index: 999;
+        background-color: white;
+        border: 1px solid var(--color-border);
+        padding: 5px 10px;
+        border-radius: 4px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        text-decoration: none;
+        color: var(--color-mundir);
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .fullscreen-btn:hover {
+        background-color: var(--color-old-paper);
+    }
+    #map-container.fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 9999;
+        margin: 0;
+        padding: 0;
+    }
+
+    tr.highlighted {
+        background-color: #fff3cd !important;
+    }
+
+    .battle-row {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    Сражения
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item active">Сражения</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+
+        {% if battles %}
+        <!-- Временная шкала -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-calendar-alt"></i> Хронология сражений</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline-slider-container">
+                            <div id="timeline-slider"></div>
+                            <div class="timeline-pips-container" id="timeline-pips"></div>
+                        </div>
+                        <div class="text-center mt-2">
+                            <button id="reset-filters" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-undo"></i> Сбросить фильтры
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карта + Таблица -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-map"></i> Карта и список сражений</h3>
+                        <div class="card-tools">
+                            {% if allow_editing %}
+                                <a href="{{ url_for('battles.new_battle') }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Добавить
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="map-table-container" id="map-table-container">
+                            <!-- Таблица -->
+                            <div class="table-container">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40px;">#</th>
+                                            <th>Название</th>
+                                            <th style="width: 110px;">Дата</th>
+                                            <th>Место</th>
+                                            <th style="width: 130px;">Победитель</th>
+                                            <th style="width: 110px;">Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for battle in battles %}
+                                        <tr class="battle-row"
+                                            data-id="{{ battle.id }}"
+                                            data-name="{{ battle.name }}"
+                                            data-date="{{ battle.date if battle.date else '' }}"
+                                            data-timestamp="{{ battle.timestamp if battle.timestamp else 0 }}">
+                                            <td>{{ loop.index }}</td>
+                                            <td>
+                                                <a href="{{ url_for('battles.view_battle', id=battle.id) }}"
+                                                   style="color: var(--color-mundir); font-weight: 500;">
+                                                    {{ battle.name }}
+                                                </a>
+                                            </td>
+                                            <td>{{ battle.date if battle.date else '—' }}</td>
+                                            <td>{{ battle.place_name if battle.place_name else '—' }}</td>
+                                            <td>
+                                                {% if battle.victory %}
+                                                    {% set v = battle.victory|lower|trim %}
+                                                    {% if 'french' in v %}
+                                                        <span class="badge-winner-france">{{ battle.victory }}</span>
+                                                    {% elif 'spanish' in v %}
+                                                        <span class="badge-winner-spain">{{ battle.victory }}</span>
+                                                    {% elif 'portuguese' in v %}
+                                                        <span class="badge-winner-portugal">{{ battle.victory }}</span>
+                                                    {% elif 'undecided' in v or 'unknown' in v %}
+                                                        <span class="badge-winner-unknown">{{ battle.victory }}</span>
+                                                    {% else %}
+                                                        <span class="badge-winner-other">{{ battle.victory }}</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge-winner-unknown">Неизвестно</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{{ url_for('battles.view_battle', id=battle.id) }}" class="btn btn-outline-info" title="Просмотр">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    
+                                                    {% if allow_editing %}
+                                                        <a href="{{ url_for('battles.edit_battle', id=battle.id) }}" class="btn btn-outline-warning" title="Редактировать">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                    {% endif %}
+
+                                                    <a href="#" class="btn btn-outline-info zoom-to-battle" data-id="{{ battle.id }}" title="Показать на карте">
+                                                        <i class="fas fa-map"></i>
+                                                    </a>
+
+                                                    {% if allow_editing %}
+                                                        <form action="{{ url_for('battles.delete_battle', id=battle.id) }}" method="POST" class="d-inline">
+                                                            <button type="submit" class="btn btn-outline-danger" title="Удалить" onclick="return confirm('Вы уверены?')">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Карта -->
+                            <div class="map-container" id="map-container">
+                                <div id="map"></div>
+                                <a href="#" id="toggle-fullscreen" class="fullscreen-btn" title="На весь экран">
+                                    <i class="fas fa-expand"></i> На весь экран
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted" style="background: var(--color-old-paper); border-top: 1px solid var(--color-border);">
+                        <i class="fas fa-info-circle"></i>
+                        Показано: <span id="visible-count">{{ battles|length }}</span> из {{ battles|length }} сражений
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Нет сражений для отображения.
+            <a href="{{ url_for('battles.new_battle') }}" class="alert-link">Добавить первое сражение</a>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nouislider@15.5.1/dist/nouislider.min.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<script>
+$(document).ready(function() {
+    if (!$('#map').length) return; // если сражений нет — не инициализируем карту
+
+    let isFullscreen = false;
+
+    // Преобразование исторической даты в timestamp (секунды)
+    function historicalDateToTimestamp(year, month, day) {
+        return new Date(year, month - 1, day).getTime() / 1000;
+    }
+
+    // Формат подсказки: "6 августа 1812 г."
+    function formatTooltipDate(date) {
+        const day = date.getDate();
+        const month = date.toLocaleString('ru', { month: 'long' });
+        const year = date.getFullYear();
+        return day === 1 ? `${month} ${year} г.` : `${day} ${month} ${year} г.`;
+    }
+
+    // -------- КАРТА --------
+    const map = L.map('map').setView([48.0, 10.0], 4);
+
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    });
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri'
+    });
+    const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenTopoMap'
+    });
+
+    osmLayer.addTo(map);
+
+    L.control.layers({
+        "OpenStreetMap": osmLayer,
+        "Спутник (Esri)": satelliteLayer,
+        "Топография (OpenTopoMap)": topoLayer
+    }, null, { collapsed: false }).addTo(map);
+
+    // Кластеры
+    const markerCluster = L.markerClusterGroup({
+        iconCreateFunction: function(cluster) {
+            return L.divIcon({
+                html: '<div style="background-color: #8B1A1A; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px; border: 2px solid #f5c842;">' + cluster.getChildCount() + '</div>',
+                className: 'marker-cluster',
+                iconSize: L.point(30, 30)
+            });
+        }
+    });
+    map.addLayer(markerCluster);
+
+    // -------- ПОЛНОЭКРАННЫЙ РЕЖИМ --------
+    $('#toggle-fullscreen').on('click', function(e) {
+        e.preventDefault();
+        isFullscreen = !isFullscreen;
+        if (isFullscreen) {
+            $('.table-container').fadeOut(200, function () {
+                $('#map-container').addClass('fullscreen');
+                map.invalidateSize();
+            });
+            $(this).html('<i class="fas fa-compress"></i> Выйти');
+        } else {
+            $('.table-container').fadeIn(200, function () {
+                $('#map-container').removeClass('fullscreen');
+                map.invalidateSize();
+            });
+            $(this).html('<i class="fas fa-expand"></i> На весь экран');
+        }
+    });
+
+    $(document).on('keydown', function(e) {
+        if (e.key === "Escape" && isFullscreen) {
+            $('.table-container').fadeIn(200, function () {
+                $('#map-container').removeClass('fullscreen');
+                map.invalidateSize();
+            });
+            $('#toggle-fullscreen').html('<i class="fas fa-expand"></i> На весь экран');
+            isFullscreen = false;
+        }
+    });
+
+    // -------- ДАННЫЕ СРАЖЕНИЙ ИЗ FLASK --------
+    const allBattles = [];
+
+    {% for battle in battles %}
+        {% if battle.geom %}
+            try {
+                const coords = {{ battle.geom | tojson | safe }}.coordinates;
+                let year = 0, month = 1, day = 1;
+                {% if battle.date %}
+                (function() {
+                    const dateParts = "{{ battle.date }}".split('-');
+                    year = parseInt(dateParts[0]) || 1800;
+                    month = parseInt(dateParts[1]) || 1;
+                    day = parseInt(dateParts[2]) || 1;
+                })();
+                {% endif %}
+                const popupContent = `<b>{{ battle.name }}</b><br>
+                    Дата: {{ battle.date if battle.date else 'не указана' }}<br>
+                    Место: {{ battle.place_name if battle.place_name else 'не указано' }}<br>
+                    Победитель: {{ battle.victory if battle.victory else 'не определён' }}`;
+                const marker = L.marker([coords[1], coords[0]]).bindPopup(popupContent);
+                const battleData = {
+                    id: {{ battle.id }},
+                    name: "{{ battle.name }}",
+                    date: "{{ battle.date if battle.date else 'не указана' }}",
+                    year: year,
+                    month: month,
+                    day: day,
+                    timestamp: historicalDateToTimestamp(year, month, day),
+                    marker: marker,
+                    row: $('tr[data-id="{{ battle.id }}"]')
+                };
+                allBattles.push(battleData);
+                markerCluster.addLayer(marker);
+            } catch (e) {
+                console.error('Error with battle {{ battle.id }}:', e);
+            }
+        {% endif %}
+    {% endfor %}
+
+    // -------- ПОДСВЕТКА СТРОК И МАРКЕРОВ --------
+    allBattles.forEach(function(battle) {
+        battle.row.hover(
+            function () {
+                $(this).addClass('highlighted');
+                if (battle.marker) battle.marker.openPopup();
+            },
+            function () { $(this).removeClass('highlighted'); }
+        ).on('click', function (e) {
+            const target = $(e.target).closest('a, button, form');
+            if (!target.length && battle.marker) {
+                map.setView(battle.marker.getLatLng(), 12);
+            }
+        });
+
+        if (battle.marker) {
+            battle.marker.on('click', function () {
+                $('.battle-row').removeClass('highlighted');
+                battle.row.addClass('highlighted').get(0).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+        }
+    });
+
+    // -------- ВРЕМЕННАЯ ШКАЛА --------
+    let slider;
+
+    function createTimelinePips() {
+        const container = document.getElementById('timeline-pips');
+        if (!container) return;
+        container.innerHTML = '';
+        const totalYears = 9;
+        for (let i = 0; i < totalYears; i++) {
+            const year = 1807 + i;
+            const pip = document.createElement('div');
+            pip.className = 'timeline-pip';
+            pip.innerHTML = '<span>' + year + '</span>';
+            container.appendChild(pip);
+        }
+    }
+
+    function filterBattles() {
+        const values = slider.noUiSlider.get();
+        const min = parseFloat(values[0]);
+        const max = parseFloat(values[1]);
+        let visibleCount = 0;
+
+        markerCluster.clearLayers();
+        allBattles.forEach(function(battle) {
+            const inRange = battle.timestamp >= min && battle.timestamp <= max;
+            battle.row.toggle(inRange);
+            if (inRange && battle.marker) {
+                markerCluster.addLayer(battle.marker);
+                visibleCount++;
+            }
+        });
+
+        $('#visible-count').text(visibleCount);
+        if (visibleCount > 0) {
+            map.fitBounds(markerCluster.getBounds().pad(0.2));
+        }
+    }
+
+    function initTimeline() {
+        const minDate = historicalDateToTimestamp(1807, 1, 1);
+        const maxDate = historicalDateToTimestamp(1815, 12, 31);
+
+        slider = document.getElementById('timeline-slider');
+        noUiSlider.create(slider, {
+            start: [minDate, maxDate],
+            connect: true,
+            range: { 'min': minDate, 'max': maxDate },
+            tooltips: [
+                { to: v => formatTooltipDate(new Date(v * 1000)) },
+                { to: v => formatTooltipDate(new Date(v * 1000)) }
+            ],
+            pips: { mode: 'none' }
+        });
+
+        createTimelinePips();
+        filterBattles();
+
+        let filterTimeout;
+        slider.noUiSlider.on('update', function() {
+            clearTimeout(filterTimeout);
+            filterTimeout = setTimeout(filterBattles, 300);
+        });
+    }
+
+    if (document.getElementById('timeline-slider')) {
+        initTimeline();
+    }
+
+    // Сброс фильтров
+    $('#reset-filters').on('click', function() {
+        const minDate = historicalDateToTimestamp(1807, 1, 1);
+        const maxDate = historicalDateToTimestamp(1815, 12, 31);
+        slider.noUiSlider.set([minDate, maxDate]);
+    });
+
+    // Кнопка "Показать на карте"
+    $('.zoom-to-battle').on('click', function(e) {
+        e.preventDefault();
+        const battleId = parseInt($(this).data('id'));
+        const battleData = allBattles.find(b => b.id === battleId);
+        if (battleData && battleData.marker) {
+            map.setView(battleData.marker.getLatLng(), 12);
+        }
+    });
+
+    // Адаптивность
+    if (window.matchMedia("(max-width: 992px)").matches) {
+        map.setView([48.0, 10.0], 3);
+    }
+});
+</script>
+{% endblock %}

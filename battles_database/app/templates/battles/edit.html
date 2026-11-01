@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Редактирование: {{ battle.name }} — Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ---------- ФОРМА ---------- */
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--color-mundir);
+        margin-bottom: 4px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #8B1A1A;
+    }
+    .form-control, .form-select {
+        border-color: var(--color-border);
+        border-radius: 4px;
+        font-size: 0.9rem;
+        background: var(--color-white);
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: var(--color-bronze);
+        box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
+    }
+    textarea.form-control {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    /* ---------- СЕКЦИИ ---------- */
+    .form-section {
+        background: var(--color-old-paper);
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        padding: 16px 20px;
+        margin-top: 20px;
+    }
+    .form-section h5 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 700;
+        color: var(--color-mundir);
+        font-size: 1.05rem;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    /* ---------- УЧАСТНИКИ ---------- */
+    .unit-list {
+        list-style-type: none;
+        padding-left: 0;
+        margin-bottom: 0;
+    }
+    .unit-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        margin-bottom: 5px;
+        background: var(--color-white);
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+    .unit-list li:last-child {
+        margin-bottom: 0;
+    }
+    .unit-list li .unit-label {
+        color: var(--color-mundir);
+        font-weight: 500;
+    }
+
+    /* ---------- КНОПКИ ---------- */
+    .btn-save {
+        background: var(--color-bronze);
+        border: 1px solid var(--color-bronze);
+        color: white;
+        font-weight: 500;
+    }
+    .btn-save:hover {
+        background: #a0750a;
+        border-color: #a0750a;
+        color: white;
+    }
+    .btn-cancel {
+        background: transparent;
+        border: 1px solid var(--color-border);
+        color: var(--color-mundir);
+    }
+    .btn-cancel:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+        color: var(--color-mundir);
+    }
+    .btn-add-participant {
+        background: transparent;
+        border: 1px solid var(--color-bronze);
+        color: var(--color-bronze);
+        font-weight: 500;
+    }
+    .btn-add-participant:hover {
+        background: var(--color-bronze);
+        color: white;
+        border-color: var(--color-bronze);
+    }
+    .btn-remove-participant {
+        background: transparent;
+        border: 1px solid #8B1A1A;
+        color: #8B1A1A;
+        font-size: 0.75rem;
+        padding: 2px 10px;
+        border-radius: 4px;
+    }
+    .btn-remove-participant:hover {
+        background: #8B1A1A;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    Редактирование сражения
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('battles.list_battles') }}">Сражения</a></li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('battles.view_battle', id=battle.id) }}">
+                            {{ battle.name }}
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active">Редактирование</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card detail-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-edit"></i> {{ battle.name }}
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('battles.edit_battle', id=battle.id) }}" novalidate id="edit-battle-form">
+                    {% include "partials/_form_errors.html" %}
+
+                    <!-- Название -->
+                    <div class="mb-3">
+                        <label for="name" class="form-label required">Название сражения</label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                               value="{{ request.form.name or battle.name }}">
+                    </div>
+
+                    <!-- Даты -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="date_begin" class="form-label required">Дата начала</label>
+                            <input type="date" class="form-control" id="date_begin" name="date_begin" required
+                                   value="{{ request.form.date_begin or (battle.date_begin.strftime('%Y-%m-%d') if battle.date_begin else '') }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="date_end" class="form-label">Дата окончания</label>
+                            <input type="date" class="form-control" id="date_end" name="date_end"
+                                   value="{{ request.form.date_end or (battle.date_end.strftime('%Y-%m-%d') if battle.date_end else '') }}">
+                        </div>
+                    </div>
+
+                    <!-- Место -->
+                    <div class="mb-3">
+                        <label for="place_id" class="form-label">Место сражения</label>
+                        <select class="form-select" id="place_id" name="place_id">
+                            <option value="">— Выберите место —</option>
+                            {% for place in places %}
+                                <option value="{{ place.id }}"
+                                    {% if (request.form.place_id and request.form.place_id|string == place.id|string) or (not request.form.place_id and battle.place_id == place.id) %}selected{% endif %}>
+                                    {{ place.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Победитель -->
+                    <div class="mb-3">
+                        <label for="victory" class="form-label required">Победитель</label>
+                        <input type="text" class="form-control" id="victory" name="victory" required
+                               value="{{ request.form.victory or battle.victory }}">
+                        <small class="text-muted" style="font-size: 0.75rem;">
+                            Используйте значения: <code>french</code>, <code>Spanish</code>, <code>Portuguese</code>, <code>British</code>, <code>allied</code>, <code>undecided</code> — для правильного цвета бейджа.
+                        </small>
+                    </div>
+
+                    <!-- Описание -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Описание</label>
+                        <textarea class="form-control" id="description" name="description" rows="5">{{ request.form.description or battle.description or '' }}</textarea>
+                    </div>
+
+                    <!-- Участники -->
+                    <div class="form-section">
+                        <h5><i class="fas fa-users" style="color: var(--color-bronze);"></i> Участники сражения</h5>
+                        <div class="row">
+                            <!-- Французские войска -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">🇫🇷 Французские войска</label>
+                                <div class="input-group mb-2">
+                                    <select id="french-units" class="form-select">
+                                        <option value="">— Выберите подразделение —</option>
+                                        {% for unit in french_units %}
+                                            <option value="{{ unit.id }}">{{ unit.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-add-participant"
+                                            onclick="addParticipant('french-units', 'french-list')">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <ul id="french-list" class="unit-list">
+                                    {% for p in participants if p.unit and p.unit.country and p.unit.country.name == 'France' %}
+                                        <li>
+                                            <span class="unit-label">{{ p.unit.name }}</span>
+                                            <button type="button" class="btn-remove-participant"
+                                                    onclick="removeParticipant(this)">Удалить</button>
+                                            <input type="hidden" name="unit_ids" value="{{ p.unit.id }}">
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                            <!-- Союзники -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Союзники</label>
+                                <div class="input-group mb-2">
+                                    <select id="other-units" class="form-select">
+                                        <option value="">— Выберите подразделение —</option>
+                                        {% for unit in other_units %}
+                                            <option value="{{ unit.id }}">{{ unit.name }} ({{ unit.country.name if unit.country else '?' }})</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-add-participant"
+                                            onclick="addParticipant('other-units', 'other-list')">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <ul id="other-list" class="unit-list">
+                                    {% for p in participants if p.unit and p.unit.country and p.unit.country.name != 'France' %}
+                                        <li>
+                                            <span class="unit-label">{{ p.unit.name }} ({{ p.unit.country.name if p.unit.country else '?' }})</span>
+                                            <button type="button" class="btn-remove-participant"
+                                                    onclick="removeParticipant(this)">Удалить</button>
+                                            <input type="hidden" name="unit_ids" value="{{ p.unit.id }}">
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('battles.view_battle', id=battle.id) }}" class="btn btn-cancel">
+                            <i class="fas fa-times"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-save">
+                            <i class="fas fa-save"></i> Сохранить изменения
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ============ ДОБАВЛЕНИЕ УЧАСТНИКА ============
+function addParticipant(selectId, listId) {
+    const select = document.getElementById(selectId);
+    const selectedOption = select.options[select.selectedIndex];
+    const list = document.getElementById(listId);
+
+    if (!select.value || !selectedOption.text) return;
+
+    const existing = Array.from(list.getElementsByTagName('li')).some(li => {
+        return li.textContent.includes(selectedOption.text);
+    });
+    if (existing) {
+        alert("Это подразделение уже добавлено");
+        return;
+    }
+
+    const li = document.createElement('li');
+    li.innerHTML = `
+        <span class="unit-label">${selectedOption.text}</span>
+        <button type="button" class="btn-remove-participant" onclick="removeParticipant(this)">Удалить</button>
+        <input type="hidden" name="unit_ids" value="${select.value}">
+    `;
+    list.appendChild(li);
+    select.selectedIndex = 0;
+}
+
+// ============ УДАЛЕНИЕ УЧАСТНИКА ============
+function removeParticipant(button) {
+    button.closest('li').remove();
+}
+
+// ============ ВАЛИДАЦИЯ ============
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('edit-battle-form');
+
+    form.addEventListener('submit', function (e) {
+        let isValid = true;
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+
+        document.querySelectorAll('.required').forEach(function (label) {
+            const input = document.getElementById(label.getAttribute('for'));
+            if (input && !input.value) {
+                isValid = false;
+                input.classList.add('is-invalid');
+                const err = document.createElement('div');
+                err.className = 'invalid-feedback d-block';
+                err.textContent = 'Это поле обязательно для заполнения';
+                input.after(err);
+            }
+        });
+
+        const begin = document.getElementById('date_begin').value;
+        const end = document.getElementById('date_end').value;
+        if (begin && end && new Date(end) < new Date(begin)) {
+            isValid = false;
+            const dateEnd = document.getElementById('date_end');
+            dateEnd.classList.add('is-invalid');
+            const err = document.createElement('div');
+            err.className = 'invalid-feedback d-block';
+            err.textContent = 'Дата окончания не может быть раньше даты начала';
+            dateEnd.after(err);
+        }
+
+        if (!isValid) {
+            e.preventDefault();
+            const first = document.querySelector('.is-invalid');
+            if (first) {
+                window.scrollTo({ top: first.offsetTop - 100, behavior: 'smooth' });
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

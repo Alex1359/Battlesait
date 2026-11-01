@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Численность: {{ unit.name }} — Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Стили для графика и таблицы */
+    .chart-container {
+        position: relative;
+        height: 400px;
+        width: 100%;
+        background: var(--color-white);
+        padding: 15px;
+        border-radius: 4px;
+        border: 1px solid var(--color-border);
+    }
+    .strength-table th {
+        background-color: var(--color-old-paper) !important;
+        color: var(--color-mundir);
+        font-family: 'Playfair Display', serif;
+    }
+    .strength-table td { font-size: 0.9rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    Численность: {{ unit.name }}
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('units.list_units') }}">Подразделения</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('units.view_unit', id=unit.id) }}">{{ unit.name }}</a></li>
+                    <li class="breadcrumb-item active">Численность</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+        
+        <!-- Кнопки навигации -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <a href="{{ url_for('units.view_unit', id=unit.id) }}" class="btn btn-cancel">
+                    <i class="fas fa-arrow-left"></i> К подразделению
+                </a>
+                <a href="{{ url_for('units.view_structure', id=unit.id) }}" class="btn btn-outline-primary ms-2">
+                    <i class="fas fa-sitemap"></i> Структура
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- График -->
+            <div class="col-12 mb-4">
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line"></i> График изменения списочной численности
+                    </div>
+                    <div class="card-body">
+                        {% if strengths %}
+                            <div class="chart-container">
+                                <canvas id="strengthChart"></canvas>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Нет данных о численности.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Таблица -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-list"></i> Детальные записи
+                    </div>
+                    <div class="card-body">
+                        {% if strengths %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover strength-table">
+                                <thead>
+                                    <tr>
+                                        <th>Дата отчёта</th>
+                                        <th>Эффектив. (Effectives)</th>
+                                        <th>Нижние чины (ORS)</th>
+                                        <th>Больные</th>
+                                        <th>В командировке</th>
+                                        <th>Умерло</th>
+                                        <th>Дезертиры</th>
+                                        <th>Лошади</th>
+                                        <th>Театр</th>
+                                        <th>Примечания</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for s in strengths %}
+                                    <tr>
+                                        <td>{{ s.reported_date.strftime('%d.%m.%Y') if s.reported_date else '—' }}</td>
+                                        <td><strong>{{ s.effectives or '—' }}</strong></td>
+                                        <td>{{ s.total_ors or '—' }}</td>
+                                        <td>{{ s.total_sick or '0' }}</td>
+                                        <td>{{ s.on_command or '0' }}</td>
+                                        <td>{{ s.dead_since_last or '0' }}</td>
+                                        <td>{{ s.deserters or '0' }}</td>
+                                        <td>{{ s.horses_total or '0' }}</td>
+                                        <td>{{ s.theatre.name if s.theatre else '—' }}</td>
+                                        <td>
+                                            {{ s.notes or '' }}
+                                            {% if s.source_file %}
+                                                <br><small class="text-muted">Источник: {{ s.source_file }}</small>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                            <p class="text-muted mb-0">Нет записей о численности.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+{% if strengths %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('strengthChart').getContext('2d');
+    
+    // Данные из Flask
+    const labels = [
+        {% for s in strengths %}
+            "{{ s.reported_date.strftime('%m.%Y') if s.reported_date else '?' }}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const dataEffectives = [
+        {% for s in strengths %}
+            {{ s.effectives or 0 }}{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const dataORS = [
+        {% for s in strengths %}
+            {{ s.total_ors or 0 }}{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Эффективные (Effectives)',
+                    data: dataEffectives,
+                    borderColor: '#1A2A3A', // мундир
+                    backgroundColor: 'rgba(26, 42, 58, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                },
+                {
+                    label: 'Нижние чины (ORS)',
+                    data: dataORS,
+                    borderColor: '#B8860B', // бронза
+                    backgroundColor: 'rgba(184, 134, 11, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' }
+            },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Количество человек' } }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

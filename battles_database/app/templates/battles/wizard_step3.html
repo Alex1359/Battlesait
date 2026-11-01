@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Новое сражение (шаг 3: трофеи) — Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ---------- ФОРМА ---------- */
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--color-mundir);
+        margin-bottom: 4px;
+    }
+    .form-control, .form-select {
+        border-color: var(--color-border);
+        border-radius: 4px;
+        font-size: 0.9rem;
+        background: var(--color-white);
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: var(--color-bronze);
+        box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
+    }
+
+    /* ---------- ПРОГРЕСС ---------- */
+    .wizard-progress {
+        margin-top: 16px;
+    }
+    .wizard-progress .progress {
+        height: 5px;
+        background: var(--color-old-paper);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .wizard-progress .progress-bar {
+        background: var(--color-bronze);
+    }
+    .wizard-progress .steps-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-size: 0.85rem;
+    }
+    .wizard-progress .steps-labels span { color: var(--color-ash); }
+    .wizard-progress .steps-labels span.active {
+        color: var(--color-bronze);
+        font-weight: 700;
+        font-family: 'Playfair Display', serif;
+    }
+
+    /* ---------- ТРОФЕИ ---------- */
+    .trophy-form {
+        background: var(--color-white);
+        border: 1px solid var(--color-border);
+        border-left: 4px solid var(--color-bronze);
+        border-radius: 4px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+    }
+
+    /* ---------- КНОПКИ ---------- */
+    .btn-add-row {
+        background: transparent;
+        border: 1px dashed var(--color-bronze);
+        color: var(--color-bronze);
+        font-size: 0.85rem;
+        padding: 6px 16px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+    .btn-add-row:hover {
+        background: var(--color-bronze);
+        color: white;
+        border-style: solid;
+    }
+    .btn-remove-row {
+        background: transparent;
+        border: 1px solid #8B1A1A;
+        color: #8B1A1A;
+        font-size: 0.8rem;
+        padding: 4px 10px;
+        border-radius: 4px;
+        height: 38px;
+        width: 100%;
+    }
+    .btn-remove-row:hover {
+        background: #8B1A1A;
+        color: white;
+    }
+    .btn-finish {
+        background: #2D6A2D;
+        border: 1px solid #2D6A2D;
+        color: white;
+        font-weight: 500;
+        padding: 8px 24px;
+    }
+    .btn-finish:hover {
+        background: #1e4a1e;
+        border-color: #1e4a1e;
+        color: white;
+    }
+    .btn-back {
+        background: transparent;
+        border: 1px solid var(--color-border);
+        color: var(--color-mundir);
+    }
+    .btn-back:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+        color: var(--color-mundir);
+    }
+
+    .trophy-hint {
+        background: var(--color-old-paper);
+        padding: 8px 12px;
+        border-left: 3px solid var(--color-bronze);
+        border-radius: 4px;
+        font-size: 0.85rem;
+        color: var(--color-mundir);
+        margin-bottom: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    Трофеи
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('battles.list_battles') }}">Сражения</a></li>
+                    <li class="breadcrumb-item active">Новое (3/3)</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card detail-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-trophy"></i> Шаг 3: Трофеи
+                </h3>
+                <div class="wizard-progress">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 100%"
+                             aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="steps-labels">
+                        <span>1. Основная информация</span>
+                        <span>2. Участники</span>
+                        <span class="active">3. Трофеи</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('battles.save_complete_battle') }}" novalidate id="step3-form">
+                    <input type="hidden" name="step" value="3">
+                    {% include "partials/_form_errors.html" %}
+
+                    <div class="trophy-hint">
+                        <i class="fas fa-info-circle"></i>
+                        Шаг необязательный — можно пропустить и сохранить сражение без трофеев.
+                    </div>
+
+                    <div id="trophies-container">
+                        {% if trophies %}
+                            {% for trophy in trophies %}
+                                {% set idx = loop.index0 %}
+                                <div class="trophy-form" data-index="{{ idx }}">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-4 mb-2">
+                                            <label class="form-label">Тип трофея</label>
+                                            <input type="text" class="form-control"
+                                                   name="trophies-{{ idx }}-type"
+                                                   value="{{ trophy.type if trophy.type }}"
+                                                   placeholder="Например: Знамя, Орудие">
+                                        </div>
+                                        <div class="col-md-5 mb-2">
+                                            <label class="form-label">Описание</label>
+                                            <input type="text" class="form-control"
+                                                   name="trophies-{{ idx }}-description"
+                                                   value="{{ trophy.description if trophy.description }}"
+                                                   placeholder="Дополнительные детали">
+                                        </div>
+                                        <div class="col-md-3 mb-2">
+                                            <button type="button" class="btn-remove-row remove-trophy">
+                                                <i class="fas fa-times"></i> Удалить
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center py-3 mb-0">
+                                <i class="fas fa-info-circle"></i> Трофеи ещё не добавлены
+                            </p>
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="btn-add-row mt-2" id="add-trophy-btn">
+                        <i class="fas fa-plus"></i> Добавить трофей
+                    </button>
+
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('battles.new_battle_step2') }}" class="btn btn-back">
+                            <i class="fas fa-arrow-left"></i> Назад
+                        </a>
+                        <button type="submit" class="btn btn-finish">
+                            <i class="fas fa-check"></i> Сохранить сражение
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let trophyIndex = {{ trophies|length if trophies else 0 }};
+
+    // ============ ДОБАВЛЕНИЕ ТРОФЕЯ ============
+    $('#add-trophy-btn').on('click', function() {
+        const index = trophyIndex++;
+        const $row = $(`
+            <div class="trophy-form" data-index="${index}">
+                <div class="row align-items-end">
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label">Тип трофея</label>
+                        <input type="text" class="form-control"
+                               name="trophies-${index}-type"
+                               placeholder="Например: Знамя, Орудие">
+                    </div>
+                    <div class="col-md-5 mb-2">
+                        <label class="form-label">Описание</label>
+                        <input type="text" class="form-control"
+                               name="trophies-${index}-description"
+                               placeholder="Дополнительные детали">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <button type="button" class="btn-remove-row remove-trophy">
+                            <i class="fas fa-times"></i> Удалить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `);
+        $('#trophies-container').append($row);
+        $row.find('input:first').focus();
+    });
+
+    // ============ УДАЛЕНИЕ ТРОФЕЯ ============
+    $(document).on('click', '.remove-trophy', function() {
+        $(this).closest('.trophy-form').remove();
+    });
+});
+</script>
+{% endblock %}

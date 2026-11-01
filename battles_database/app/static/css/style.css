@@ -1,0 +1,690 @@
+/* ============================================
+   ВОЕННО-ИСТОРИЧЕСКИЙ АТЛАС
+   Винтажная тема для Battles Database
+   ============================================ */
+
+/* ---------- ШРИФТЫ ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+    --color-haki: #6B7B5A;
+    --color-pergament: #F5F0E1;
+    --color-mundir: #1A2A3A;
+    --color-bronze: #B8860B;
+    --color-ash: #8C8C8C;
+    --color-white: #FFFFFF;
+    --color-old-paper: #E8DCC8;
+    --color-border: #C4B8A0;
+}
+
+/* ---------- ГЛОБАЛЬНЫЕ СТИЛИ ---------- */
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--color-pergament);
+    color: #3d3d3d;
+}
+
+/* Заголовки — антиквенные */
+h1, h2, h3, h4, h5, .brand-text, .stat-number {
+    font-family: 'Playfair Display', serif;
+}
+
+/* ---------- ШАПКА (НАВИГАЦИЯ) ---------- */
+.main-header.navbar {
+    background: var(--color-mundir) !important;
+    border-bottom: 3px solid var(--color-bronze);
+}
+
+.main-header .navbar .nav-link {
+    color: rgba(255,255,255,0.8) !important;
+}
+.main-header .navbar .nav-link:hover {
+    color: #f5c842 !important;
+}
+
+.brand-text {
+    color: #f5c842;
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-size: 1.2rem;
+}
+
+/* ---------- БОКОВОЕ МЕНЮ ---------- */
+.main-sidebar {
+    background: var(--color-mundir) !important;
+}
+.main-sidebar .brand-link {
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.main-sidebar .nav-link {
+    color: rgba(255,255,255,0.7) !important;
+    border-radius: 0;
+}
+.main-sidebar .nav-link:hover {
+    background: rgba(255,255,255,0.05);
+    color: #f5c842 !important;
+}
+.main-sidebar .nav-link.active {
+    background: var(--color-bronze);
+    color: white !important;
+}
+.main-sidebar .nav-link.active .nav-icon {
+    color: white !important;
+}
+
+/* ---------- КАРТОЧКИ ---------- */
+.card {
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.card-header {
+    background: var(--color-old-paper);
+    border-bottom: 1px solid var(--color-border);
+    padding: 12px 20px;
+}
+.card-header h3, .card-header .card-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    color: var(--color-mundir);
+    font-size: 1.1rem;
+}
+
+/* ---------- КНОПКИ ---------- */
+.btn-primary {
+    background: var(--color-mundir);
+    border: 1px solid var(--color-mundir);
+}
+.btn-primary:hover {
+    background: var(--color-bronze);
+    border-color: var(--color-bronze);
+}
+
+.btn-outline-secondary {
+    border-color: var(--color-border);
+    color: var(--color-mundir);
+}
+.btn-outline-secondary:hover {
+    background: var(--color-old-paper);
+    border-color: var(--color-bronze);
+}
+
+/* ---------- ТАБЛИЦЫ ---------- */
+.table {
+    font-size: 0.9rem;
+}
+.table thead th {
+    background: var(--color-old-paper);
+    border-bottom: 2px solid var(--color-border);
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    color: var(--color-mundir);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.8rem;
+}
+.table tbody tr:hover {
+    background: rgba(107, 123, 90, 0.08);
+}
+.table tbody td {
+    border-bottom: 1px solid #e8e0d4;
+    vertical-align: middle;
+}
+
+/* ---------- БЕЙДЖИ (СТРАНЫ) ---------- */
+.badge-france {
+    background: var(--color-mundir);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+.badge-russia {
+    background: #8B1A1A;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+.badge-allies {
+    background: #2D6A2D;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+.badge-uk {
+    background: #4A2B6B;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+.badge-austria {
+    background: #8B6914;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+/* ---------- СТАТИСТИКА НА ГЛАВНОЙ ---------- */
+.hero-stats {
+    background: linear-gradient(135deg, var(--color-mundir) 0%, #2a3f4f 100%);
+    color: white;
+    padding: 35px 0;
+    border-radius: 4px;
+    margin-bottom: 25px;
+    border: 1px solid var(--color-bronze);
+}
+.hero-stats .stat-item {
+    text-align: center;
+    padding: 10px 0;
+}
+.hero-stats .stat-icon {
+    font-size: 1.6rem;
+    opacity: 0.35;
+    margin-bottom: 8px;
+    display: block;
+}
+.hero-stats .stat-number {
+    font-size: 2.4rem;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #f5c842;
+    font-family: 'Playfair Display', serif;
+}
+.stat-label {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 300;
+}
+.stat-icon {
+    font-size: 1.8rem;
+    opacity: 0.3;
+    margin-bottom: 5px;
+}
+
+/* ---------- КАРТА ---------- */
+#map, #battle-map {
+    height: 400px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+}
+
+/* ---------- ВРЕМЕННАЯ ШКАЛА ---------- */
+.timeline-container {
+    background: var(--color-old-paper);
+    padding: 20px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+}
+.timeline-track {
+    height: 4px;
+    background: var(--color-border);
+    border-radius: 2px;
+    position: relative;
+}
+.timeline-progress {
+    height: 4px;
+    background: var(--color-bronze);
+    border-radius: 2px;
+    position: absolute;
+    left: 10%;
+    right: 15%;
+}
+.timeline-marker {
+    position: absolute;
+    top: -5px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px var(--color-bronze);
+}
+.timeline-marker-france { background: var(--color-mundir); }
+.timeline-marker-russia { background: #8B1A1A; }
+.timeline-marker-allies { background: #2D6A2D; }
+
+/* ---------- КАРТОЧКИ СРАЖЕНИЙ НА ГЛАВНОЙ ---------- */
+.battle-card {
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: var(--color-white);
+}
+.battle-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    border-color: var(--color-bronze);
+}
+.battle-card .card-body {
+    padding: 16px 20px;
+}
+.battle-card h5 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    color: var(--color-mundir);
+    margin-bottom: 4px;
+}
+.battle-card .battle-date {
+    font-size: 0.85rem;
+    color: var(--color-ash);
+}
+.battle-card .battle-location {
+    font-size: 0.8rem;
+    color: var(--color-ash);
+}
+
+/* ---------- ДЕТАЛИ СРАЖЕНИЯ ---------- */
+.detail-card .card-header {
+    background: var(--color-old-paper);
+}
+.detail-card .card-header i {
+    color: var(--color-bronze);
+    margin-right: 8px;
+    width: 20px;
+}
+.detail-card .card-body {
+    padding: 16px 20px;
+}
+.detail-card dl dt {
+    font-weight: 600;
+    color: var(--color-mundir);
+    font-size: 0.85rem;
+}
+.detail-card dl dd {
+    font-size: 0.95rem;
+}
+
+/* ---------- УЧАСТНИКИ ---------- */
+.participant-item {
+    padding: 6px 0;
+    border-bottom: 1px solid #f0ebe0;
+    font-size: 0.9rem;
+}
+.participant-item:last-child {
+    border-bottom: none;
+}
+.participant-item .unit-name {
+    font-weight: 500;
+}
+.participant-item .unit-type {
+    font-size: 0.8rem;
+    color: var(--color-ash);
+    margin-left: 8px;
+}
+.participant-item .unit-commander {
+    font-size: 0.8rem;
+    color: var(--color-bronze);
+    margin-left: 8px;
+}
+
+/* ---------- ПОТЕРИ ---------- */
+.losses-table tr td {
+    padding: 4px 8px;
+    font-size: 0.9rem;
+}
+.losses-table .loss-value {
+    font-weight: 600;
+}
+.losses-table .loss-total {
+    font-weight: 700;
+    border-top: 1px solid var(--color-border);
+    padding-top: 8px;
+}
+
+/* ---------- РАЗДЕЛИТЕЛИ ---------- */
+.divider {
+    display: flex;
+    align-items: center;
+    color: var(--color-ash);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 20px 0;
+}
+.divider::before,
+.divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+}
+.divider::before {
+    margin-right: 15px;
+}
+.divider::after {
+    margin-left: 15px;
+}
+.divider .divider-icon {
+    color: var(--color-bronze);
+}
+
+/* ---------- ФУТЕР ---------- */
+.main-footer {
+    background: var(--color-mundir);
+    color: rgba(255,255,255,0.6);
+    font-size: 0.85rem;
+    padding: 15px 20px;
+    border-top: 2px solid var(--color-bronze);
+}
+.main-footer a {
+    color: #f5c842;
+}
+.main-footer a:hover {
+    color: white;
+}
+
+/* ---------- АНИМАЦИИ ---------- */
+.fade-in {
+    animation: fadeIn 0.8s ease forwards;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ ОФИЦЕРОВ И ПОДРАЗДЕЛЕНИЙ
+   ============================================ */
+
+/* ---------- КАРТОЧКИ ОФИЦЕРОВ ---------- */
+.officer-card {
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: var(--color-white);
+}
+.officer-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    border-color: var(--color-bronze);
+}
+.officer-card .card-body {
+    padding: 16px 20px;
+}
+.officer-card .officer-name {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    color: var(--color-mundir);
+    font-size: 1.1rem;
+}
+.officer-card .officer-rank {
+    font-size: 0.85rem;
+    color: var(--color-bronze);
+    font-weight: 500;
+}
+.officer-card .officer-years {
+    font-size: 0.85rem;
+    color: var(--color-ash);
+}
+.officer-card .officer-country {
+    font-size: 0.8rem;
+}
+
+/* ---------- ИЕРАРХИЯ ПОДРАЗДЕЛЕНИЙ ---------- */
+.hierarchy-tree {
+    padding-left: 0;
+    list-style: none;
+}
+.hierarchy-tree li {
+    padding: 4px 0 4px 24px;
+    position: relative;
+    border-left: 1px solid var(--color-border);
+    margin-left: 12px;
+}
+.hierarchy-tree li:last-child {
+    border-left: none;
+}
+.hierarchy-tree li::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 14px;
+    width: 16px;
+    height: 1px;
+    background: var(--color-border);
+}
+.hierarchy-tree .root-item {
+    padding-left: 0;
+    border-left: none;
+}
+.hierarchy-tree .root-item::before {
+    display: none;
+}
+.hierarchy-tree .unit-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+.hierarchy-tree .unit-item:hover {
+    background: rgba(107, 123, 90, 0.08);
+}
+.hierarchy-tree .unit-item .unit-name {
+    font-weight: 500;
+    color: var(--color-mundir);
+}
+.hierarchy-tree .unit-item .unit-type {
+    font-size: 0.75rem;
+    color: var(--color-ash);
+    background: var(--color-old-paper);
+    padding: 1px 8px;
+    border-radius: 3px;
+}
+.hierarchy-tree .unit-item .unit-dates {
+    font-size: 0.75rem;
+    color: var(--color-ash);
+}
+.hierarchy-tree .unit-item .unit-badge {
+    font-size: 0.7rem;
+    padding: 1px 8px;
+    border-radius: 3px;
+}
+.hierarchy-tree .unit-item .unit-badge.army { background: #1A2A3A; color: white; }
+.hierarchy-tree .unit-item .unit-badge.corps { background: #2A4A5A; color: white; }
+.hierarchy-tree .unit-item .unit-badge.division { background: #4A6A7A; color: white; }
+.hierarchy-tree .unit-item .unit-badge.brigade { background: #6A8A8A; color: white; }
+.hierarchy-tree .unit-item .unit-badge.regiment { background: #8A9A8A; color: white; }
+.hierarchy-tree .unit-item .unit-badge.battalion { background: #AAAA8A; color: #333; }
+
+/* ---------- ФИЛЬТРЫ ---------- */
+.filter-section {
+    background: var(--color-old-paper);
+    padding: 16px 20px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    margin-bottom: 20px;
+}
+.filter-section .filter-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-mundir);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.filter-section .form-control,
+.filter-section .form-select {
+    border-color: var(--color-border);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: var(--color-white);
+}
+.filter-section .form-control:focus,
+.filter-section .form-select:focus {
+    border-color: var(--color-bronze);
+    box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
+}
+.filter-section .btn-filter {
+    background: var(--color-mundir);
+    border-color: var(--color-mundir);
+    color: white;
+}
+.filter-section .btn-filter:hover {
+    background: var(--color-bronze);
+    border-color: var(--color-bronze);
+}
+.filter-section .btn-reset {
+    background: transparent;
+    border-color: var(--color-border);
+    color: var(--color-mundir);
+}
+.filter-section .btn-reset:hover {
+    background: var(--color-old-paper);
+    border-color: var(--color-bronze);
+}
+
+/* ---------- ИСТОРИЯ КОМАНДОВАНИЯ ---------- */
+.command-timeline {
+    position: relative;
+    padding-left: 20px;
+}
+.command-timeline::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--color-border);
+}
+.command-item {
+    position: relative;
+    padding: 6px 0 6px 20px;
+}
+.command-item::before {
+    content: '';
+    position: absolute;
+    left: -2px;
+    top: 14px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-bronze);
+    border: 2px solid var(--color-white);
+    box-shadow: 0 0 0 2px var(--color-bronze);
+}
+.command-item .command-rank {
+    font-weight: 600;
+    color: var(--color-mundir);
+}
+.command-item .command-date {
+    font-size: 0.8rem;
+    color: var(--color-ash);
+}
+.command-item .command-notes {
+    font-size: 0.85rem;
+    color: #555;
+}
+
+/* ---------- ПЕРЕМЕЩЕНИЯ НА КАРТЕ ---------- */
+.movement-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 8px 0;
+}
+.movement-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--color-ash);
+}
+.movement-legend .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+}
+.movement-legend .legend-line {
+    width: 24px;
+    height: 2px;
+    border-radius: 1px;
+}
+
+/* ---------- АНИМАЦИЯ ДЛЯ КАРТОЧЕК ---------- */
+.card-fade-in {
+    animation: cardFadeIn 0.6s ease forwards;
+    opacity: 0;
+}
+@keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.card-fade-in:nth-child(1) { animation-delay: 0.05s; }
+.card-fade-in:nth-child(2) { animation-delay: 0.10s; }
+.card-fade-in:nth-child(3) { animation-delay: 0.15s; }
+.card-fade-in:nth-child(4) { animation-delay: 0.20s; }
+.card-fade-in:nth-child(5) { animation-delay: 0.25s; }
+.card-fade-in:nth-child(6) { animation-delay: 0.30s; }
+
+/* ---------- АДАПТИВНОСТЬ ---------- */
+@media (max-width: 768px) {
+    .officer-card .card-body {
+        padding: 12px 16px;
+    }
+    .hierarchy-tree li {
+        padding-left: 16px;
+        margin-left: 8px;
+    }
+    .filter-section .row > div {
+        margin-bottom: 10px;
+    }
+    .filter-section .row > div:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* ---------- БЕЙДЖИ ПОБЕДИТЕЛЕЙ (расширенная палитра) ---------- */
+.badge-winner-france {
+    background: #015ebb;   /* синий — Франция */
+    color: white;
+}
+.badge-winner-spain {
+    background: #D4A017;   /* жёлтый — Испания */
+    color: #1A2A3A;
+}
+.badge-winner-portugal {
+    background: #2D6A2D;   /* зелёный — Португалия */
+    color: white;
+}
+.badge-winner-unknown {
+    background: #8C8C8C;   /* серый — неизвестно */
+    color: white;
+}
+.badge-winner-other {
+    background: #8B1A1A;   /* красный — все остальные (Россия, UK, Австрия, Пруссия и т.д.) */
+    color: white;
+}
+
+/* Общая база для всех бейджей победителя */
+.badge-winner-france,
+.badge-winner-spain,
+.badge-winner-portugal,
+.badge-winner-unknown,
+.badge-winner-other {
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 0.75rem;
+    display: inline-block;
+}

@@ -1,0 +1,528 @@
+{% extends "base.html" %}
+
+{% block title %}{{ unit.name }} — Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+    #unit-map {
+        height: 400px;
+        border-radius: 4px;
+        border: 1px solid var(--color-border);
+        z-index: 1;
+    }
+    .unit-type-badge {
+        font-size: 0.8rem;
+        padding: 4px 14px;
+        border-radius: 4px;
+        background: var(--color-mundir);
+        color: white;
+        margin-left: 12px;
+        vertical-align: middle;
+    }
+    .parent-unit-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: var(--color-old-paper);
+        border-radius: 4px;
+        border: 1px solid var(--color-border);
+        margin-bottom: 6px;
+        font-size: 0.9rem;
+    }
+    .parent-unit-item:last-child { margin-bottom: 0; }
+    .parent-unit-item .arrow {
+        color: var(--color-bronze);
+    }
+    .parent-unit-item .dates {
+        font-size: 0.8rem;
+        color: var(--color-ash);
+        margin-left: auto;
+        white-space: nowrap;
+    }
+    .child-unit-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-bottom: 1px solid #f0ebe0;
+        font-size: 0.9rem;
+    }
+    .child-unit-item:last-child {
+        border-bottom: none;
+    }
+    .child-unit-item .child-name {
+        font-weight: 500;
+        color: var(--color-mundir);
+        flex: 1;
+    }
+    .child-unit-item .unit-type {
+        font-size: 0.75rem;
+        color: var(--color-ash);
+        background: var(--color-old-paper);
+        padding: 1px 8px;
+        border-radius: 3px;
+    }
+    .child-unit-item .dates {
+        font-size: 0.8rem;
+        color: var(--color-ash);
+        white-space: nowrap;
+    }
+    .movement-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 4px 0;
+        border-bottom: 1px solid #f0ebe0;
+        font-size: 0.9rem;
+    }
+    .movement-item:last-child {
+        border-bottom: none;
+    }
+    .movement-item .movement-date {
+        color: var(--color-ash);
+        font-size: 0.85rem;
+        min-width: 90px;
+    }
+    .movement-item .movement-place {
+        font-weight: 500;
+        color: var(--color-mundir);
+    }
+    .movement-item .movement-distance {
+        color: var(--color-ash);
+        font-size: 0.8rem;
+        margin-left: auto;
+        white-space: nowrap;
+    }
+
+    /* Карта */
+    .movement-popup b { color: var(--color-mundir); }
+    .leaflet-popup-content { min-width: 200px; }
+
+    /* Кнопки */
+    .btn-edit {
+        background: var(--color-bronze);
+        border-color: var(--color-bronze);
+        color: white;
+    }
+    .btn-edit:hover { background: #a0750a; border-color: #a0750a; color: white; }
+    .btn-delete {
+        background: transparent;
+        border-color: #8B1A1A;
+        color: #8B1A1A;
+    }
+    .btn-delete:hover { background: #8B1A1A; border-color: #8B1A1A; color: white; }
+    .btn-back {
+        background: transparent;
+        border-color: var(--color-border);
+        color: var(--color-mundir);
+    }
+    .btn-back:hover { background: var(--color-old-paper); border-color: var(--color-bronze); }
+
+    /* Бейджи победителей (для страны юнита) */
+    .badge-winner-france, .badge-winner-spain, .badge-winner-portugal,
+    .badge-winner-unknown, .badge-winner-other {
+        padding: 4px 12px;
+        border-radius: 3px;
+        font-weight: 500;
+        font-size: 0.75rem;
+        display: inline-block;
+    }
+    .badge-winner-france   { background: #1A2A3A; color: white; }
+    .badge-winner-spain    { background: #D4A017; color: #1A2A3A; }
+    .badge-winner-portugal { background: #2D6A2D; color: white; }
+    .badge-winner-unknown  { background: #8C8C8C; color: white; }
+    .badge-winner-other    { background: #8B1A1A; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    {{ unit.name }}
+                    {% if unit.type %}
+                        <span class="unit-type-badge">{{ unit.type }}</span>
+                    {% endif %}
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('units.list_units') }}">Подразделения</a></li>
+                    <li class="breadcrumb-item active">{{ unit.name }}</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+
+        <!-- Кнопки управления -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <a href="{{ url_for('units.list_units') }}" class="btn btn-back">
+                    <i class="fas fa-arrow-left"></i> К списку
+                </a>
+                <a href="{{ url_for('units.edit_unit', id=unit.id) }}" class="btn btn-edit" style="margin-left: 8px;">
+                    <i class="fas fa-edit"></i> Редактировать
+                </a>
+
+                <a href="{{ url_for('units.view_strength', id=unit.id) }}" class="btn btn-outline-primary" style="margin-left: 8px;">
+                    <i class="fas fa-chart-line"></i> Численность
+                </a>
+                <a href="{{ url_for('units.view_structure', id=unit.id) }}" class="btn btn-outline-primary" style="margin-left: 8px;">
+                    <i class="fas fa-sitemap"></i> История структуры
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+
+            <!-- Левая колонка -->
+            <div class="col-lg-5">
+
+                <!-- Основная информация -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle"></i> Основная информация
+                    </div>
+                    <div class="card-body">
+                        <dl class="row" style="margin-bottom: 0;">
+                            <dt class="col-sm-5">Страна</dt>
+                            <dd class="col-sm-7">
+                                {% if unit.country %}
+                                    {% set c = unit.country.name|lower %}
+                                    {% if 'франц' in c or 'france' in c %}
+                                        <span class="badge-winner-france">{{ unit.country.name }}</span>
+                                    {% elif 'испан' in c or 'spain' in c %}
+                                        <span class="badge-winner-spain">{{ unit.country.name }}</span>
+                                    {% elif 'португ' in c or 'portug' in c %}
+                                        <span class="badge-winner-portugal">{{ unit.country.name }}</span>
+                                    {% else %}
+                                        <span class="badge-winner-other">{{ unit.country.name }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge-winner-unknown">Не указана</span>
+                                {% endif %}
+                            </dd>
+                            <dt class="col-sm-5">Тип</dt>
+                            <dd class="col-sm-7">{{ unit.type if unit.type else '—' }}</dd>
+                            <dt class="col-sm-5">Дата формирования</dt>
+                            <dd class="col-sm-7">
+                                {{ unit.formation_date.strftime('%d.%m.%Y') if unit.formation_date else '—' }}
+                            </dd>
+                            <dt class="col-sm-5">Дата расформирования</dt>
+                            <dd class="col-sm-7">
+                                {{ unit.dissolution_date.strftime('%d.%m.%Y') if unit.dissolution_date else '—' }}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- Вышестоящее подразделение -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-level-up-alt"></i> Вышестоящее подразделение
+                    </div>
+                    <div class="card-body">
+                        {% if unit.subordination_history %}
+                            {% for relation in unit.subordination_history %}
+                                {% if relation.parent_unit %}
+                                <div class="parent-unit-item">
+                                    <a href="{{ url_for('units.view_unit', id=relation.parent_unit.id) }}"
+                                       class="text-decoration-none" style="color: var(--color-mundir); font-weight: 500;">
+                                        {{ relation.parent_unit.name }}
+                                    </a>
+                                    <span class="unit-type" style="font-size: 0.75rem; color: var(--color-ash);">({{ relation.parent_unit.type }})</span>
+                                    <span class="dates">
+                                        {{ relation.start_date.strftime('%d.%m.%Y') if relation.start_date else '—' }}
+                                        {% if relation.end_date %} – {{ relation.end_date.strftime('%d.%m.%Y') }}{% endif %}
+                                    </span>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">Нет вышестоящих подразделений</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Подчиненные подразделения -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-level-down-alt"></i> Подчинённые подразделения
+                    </div>
+                    <div class="card-body">
+                        {% if unit.children_relations %}
+                            {% for child_relation in unit.children_relations %}
+                            <div class="child-unit-item">
+                                <a href="{{ url_for('units.view_unit', id=child_relation.unit.id) }}"
+                                   class="child-name text-decoration-none">
+                                    {{ child_relation.unit.name }}
+                                </a>
+                                <span class="unit-type">{{ child_relation.unit.type }}</span>
+                                <span class="dates">
+                                    {{ child_relation.start_date.strftime('%d.%m.%Y') if child_relation.start_date else '—' }}
+                                    {% if child_relation.end_date %} – {{ child_relation.end_date.strftime('%d.%m.%Y') }}{% endif %}
+                                </span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">Нет подчинённых подразделений</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Правая колонка -->
+            <div class="col-lg-7">
+
+                <!-- Командиры -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-user-tie"></i> Командиры
+                    </div>
+                    <div class="card-body">
+                        {% if unit.commanders %}
+                            <div class="command-timeline">
+                                {% for assignment in unit.commanders %}
+                                <div class="command-item">
+                                    <div class="command-unit">
+                                        {% if assignment.commander %}
+                                            <a href="{{ url_for('commanders.view_commander', id=assignment.commander.id) }}"
+                                               class="text-decoration-none" style="color: var(--color-mundir);">
+                                                {{ assignment.commander.last_name }} {{ assignment.commander.first_name }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Неизвестен</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="command-date">
+                                        {{ assignment.Com_start.strftime('%d.%m.%Y') if assignment.Com_start else '—' }}
+                                        {% if assignment.Com_end %}
+                                            – {{ assignment.Com_end.strftime('%d.%m.%Y') }}
+                                        {% else %}
+                                            – по н.в.
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">Не было назначено ни одного командира</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Карта перемещений -->
+                {% if unit.movements %}
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-route"></i> Перемещения
+                    </div>
+                    <div class="card-body">
+                        <div id="unit-map"></div>
+                        <div class="movement-legend">
+                            <span class="legend-item">
+                                <span class="legend-dot" style="background: var(--color-bronze);"></span> Место расположения
+                            </span>
+                            <span class="legend-item">
+                                <span class="legend-line" style="background: var(--color-bronze);"></span> Маршрут
+                            </span>
+                        </div>
+                        <div style="margin-top: 12px; max-height: 200px; overflow-y: auto;">
+                            {% for movement in unit.movements %}
+                            <div class="movement-item" data-movement-id="{{ loop.index }}">
+                                <span class="movement-date">
+                                    {{ movement.date.strftime('%d.%m.%Y') if movement.date else '—' }}
+                                </span>
+                                <span class="movement-place">
+                                    {{ movement.place.name if movement.place else '—' }}
+                                </span>
+                                {% if movement.distance_km %}
+                                <span class="movement-distance">{{ "%.1f"|format(movement.distance_km) }} км</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+
+        <!-- Участие в битвах -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-flag"></i> Участие в битвах
+                    </div>
+                    <div class="card-body">
+                        {% if unit.battle_participations %}
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Сражение</th>
+                                        <th>Дата</th>
+                                        <th>Сторона</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for participation in unit.battle_participations|sort(attribute='battle.date_begin') %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('battles.view_battle', id=participation.battle.id) }}"
+                                               style="color: var(--color-mundir); font-weight: 500;">
+                                                {{ participation.battle.name }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {{ participation.battle.date_begin.strftime('%d.%m.%Y') if participation.battle.date_begin else '—' }}
+                                        </td>
+                                        <td>{{ participation.side or '—' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <p class="text-muted mb-0">Не участвовало в битвах</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Таблица перемещений -->
+        {% if unit.movements %}
+        <div class="row">
+            <div class="col-12">
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-list"></i> История перемещений
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>№</th>
+                                        <th>Место</th>
+                                        <th>Тип</th>
+                                        <th>Дата</th>
+                                        <th>Расстояние</th>
+                                        <th>Описание маршрута</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for movement in unit.movements %}
+                                    <tr data-movement-id="{{ loop.index }}">
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ movement.place.name if movement.place else '—' }}</td>
+                                        <td>{{ movement.movement_type or '—' }}</td>
+                                        <td>{{ movement.date.strftime('%d.%m.%Y') if movement.date else '—' }}</td>
+                                        <td>
+                                            {% if movement.distance_km %}
+                                                {{ "%.1f"|format(movement.distance_km) }} км
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ movement.route_description or '—' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mapElement = document.getElementById('unit-map');
+    if (!mapElement) return;
+
+    const map = L.map('unit-map').setView([50.0, 10.0], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(map);
+
+    const markersLayer = L.layerGroup().addTo(map);
+    const routesLayer = L.layerGroup().addTo(map);
+    const bounds = [];
+    let previousCoords = null;
+
+    {% for movement in unit.movements %}
+    {% if movement.place and movement.place.latitude and movement.place.longitude %}
+    (function() {
+        const movementId = {{ loop.index }};
+        const coords = [{{ movement.place.latitude }}, {{ movement.place.longitude }}];
+        bounds.push(coords);
+
+        const marker = L.marker(coords, { movementId: movementId }).addTo(markersLayer);
+
+        const popupContent = `
+            <div class="movement-popup">
+                <b>Перемещение #${movementId}</b><br>
+                <b>Место:</b> {{ movement.place.name }}<br>
+                <b>Дата:</b> {{ movement.date.strftime('%d.%m.%Y') if movement.date else '—' }}<br>
+                {% if movement.movement_type %}<b>Тип:</b> {{ movement.movement_type }}<br>{% endif %}
+                {% if movement.distance_km %}<b>Расстояние:</b> {{ "%.1f"|format(movement.distance_km) }} км<br>{% endif %}
+                {% if movement.route_description %}<b>Описание:</b> {{ movement.route_description }}{% endif %}
+            </div>
+        `;
+        marker.bindPopup(popupContent);
+
+        // Линия маршрута
+        if (previousCoords) {
+            L.polyline([previousCoords, coords], {
+                color: '#B8860B',
+                weight: 3,
+                opacity: 0.7,
+                dashArray: '8, 8'
+            }).addTo(routesLayer);
+        }
+        previousCoords = coords;
+
+        // Подсветка строки при наведении на маркер
+        const row = document.querySelector(`tr[data-movement-id="${movementId}"]`);
+        if (row) {
+            marker.on('mouseover', () => { row.style.backgroundColor = 'rgba(184, 134, 11, 0.1)'; });
+            marker.on('mouseout',  () => { row.style.backgroundColor = ''; });
+            row.addEventListener('mouseover', () => { marker.setOpacity(0.6); });
+            row.addEventListener('mouseout',  () => { marker.setOpacity(1); });
+        }
+    })();
+    {% endif %}
+    {% endfor %}
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+    }
+
+    L.control.layers({}, {
+        "Маркеры": markersLayer,
+        "Маршруты": routesLayer
+    }, { collapsed: false }).addTo(map);
+});
+</script>
+{% endblock %}

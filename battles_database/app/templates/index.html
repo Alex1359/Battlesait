@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+    .hero-description {
+        font-size: 1.05rem;
+        color: #4a4a4a;
+        line-height: 1.7;
+        padding: 15px 0;
+    }
+    .hero-description i { color: var(--color-bronze); }
+    .btn-add-battle {
+        background: var(--color-bronze);
+        border-color: var(--color-bronze);
+        color: white;
+    }
+    .btn-add-battle:hover {
+        background: #a0750a;
+        border-color: #a0750a;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    Атлас Пиренейской войны
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item active">Главная</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+
+        <!-- Описание проекта -->
+        <div class="row fade-in">
+            <div class="col-12">
+                <div class="card" style="border-left: 4px solid var(--color-bronze);">
+                    <div class="card-body hero-description">
+                        <i class="fas fa-book-open"></i>
+                        Интерактивный атлас Пиренейской войны (1807–1814).
+                        Исследуйте карты, хронологию, армии и командующих в едином
+                        военно-историческом портале.
+                        <span style="display: block; margin-top: 8px; font-size: 0.9rem; color: var(--color-ash);">
+                            <i class="fas fa-flag"></i> {{ stats.battles }} сражений ·
+                            <i class="fas fa-user"></i> {{ stats.commanders }} офицеров ·
+                            <i class="fas fa-sitemap"></i> {{ stats.units }} подразделений
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Статистика -->
+        <div class="row hero-stats fade-in">
+            <div class="col-md-3 col-6 stat-item">
+                <div class="stat-icon"><i class="fas fa-user"></i></div>
+                <div class="stat-number">{{ stats.commanders }}</div>
+                <div class="stat-label">Офицеров</div>
+            </div>
+            <div class="col-md-3 col-6 stat-item">
+                <div class="stat-icon"><i class="fas fa-flag"></i></div>
+                <div class="stat-number">{{ stats.battles }}</div>
+                <div class="stat-label">Сражений</div>
+            </div>
+            <div class="col-md-3 col-6 stat-item">
+                <div class="stat-icon"><i class="fas fa-sitemap"></i></div>
+                <div class="stat-number">{{ stats.units }}</div>
+                <div class="stat-label">Подразделений</div>
+            </div>
+            <!--<div class="col-md-3 col-6 stat-item">
+                <div class="stat-icon"><i class="fas fa-globe"></i></div>
+                <div class="stat-number">{{ stats.countries }}</div>
+                <div class="stat-label">Стран</div>
+            </div>-->
+        </div>
+
+        <!-- Карта -->
+        <div class="row fade-in">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-map"></i> Карта сражений</h3>
+                        <div class="card-tools">
+                            <span style="font-size: 0.8rem; color: var(--color-ash);">
+                                <i class="fas fa-circle" style="color: var(--color-mundir);"></i> Франция
+                                <i class="fas fa-circle" style="color: #8B1A1A; margin-left: 10px;"></i> Россия
+                                <i class="fas fa-circle" style="color: #2D6A2D; margin-left: 10px;"></i> Союзники
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="map" style="height: 450px; border-radius: 4px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider">
+            <span class="divider-icon"><i class="fas fa-hourglass-half"></i></span>
+            Последние добавленные сражения
+        </div>
+
+        <!-- Последние сражения -->
+        <div class="row fade-in">
+            {% for battle in recent_battles %}
+            <div class="col-md-4">
+                <a href="{{ url_for('battles.view_battle', id=battle.id) }}"
+                   class="text-decoration-none">
+                    <div class="card battle-card">
+                        <div class="card-body">
+                            <h5>{{ battle.name }}</h5>
+                            <div class="battle-date">
+                                <i class="far fa-calendar-alt"></i>
+                                {{ battle.date_begin.strftime('%d.%m.%Y') if battle.date_begin else '—' }}
+                            </div>
+                            <div class="battle-location">
+                                <i class="fas fa-location-dot"></i>
+                                {{ battle.place.name if battle.place else '—' }}
+                            </div>
+                            {% if battle.victory %}
+                                {% set v = battle.victory|lower %}
+                                {% if 'french' in v %}
+                                    <span class="badge-winner-france">{{ battle.victory }}</span>
+                                {% elif 'spanish' in v %}
+                                    <span class="badge-winner-spain">{{ battle.victory }}</span>
+                                {% elif 'portuguese' in v %}
+                                    <span class="badge-winner-portugal">{{ battle.victory }}</span>
+                                {% elif 'undecided' in v %}
+                                    <span class="badge-winner-unknown">{{ battle.victory }}</span>
+                                {% else %}
+                                    <span class="badge-winner-other">{{ battle.victory }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <a href="{{ url_for('battles.list_battles') }}" class="btn btn-primary">
+                <i class="fas fa-list"></i> Все сражения
+            </a>
+            <a href="{{ url_for('battles.new_battle') }}" class="btn btn-add-battle" style="margin-left: 10px;">
+                <i class="fas fa-plus"></i> Добавить сражение
+            </a>
+        </div>
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Инициализация карты
+    var map = L.map('map').setView([48.0, 10.0], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    var franceIcon = L.divIcon({
+        html: '<div style="background: #1A2A3A; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #f5c842;"></div>',
+        className: '', iconSize: [14, 14]
+    });
+    var russiaIcon = L.divIcon({
+        html: '<div style="background: #8B1A1A; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #f5c842;"></div>',
+        className: '', iconSize: [14, 14]
+    });
+    var alliesIcon = L.divIcon({
+        html: '<div style="background: #2D6A2D; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #f5c842;"></div>',
+        className: '', iconSize: [14, 14]
+    });
+
+    // Данные сражений из Flask
+    var battles = [
+        {% for battle in map_battles %}
+        {
+            name: {{ battle.name|tojson }},
+            lat: {{ battle.latitude }},
+            lng: {{ battle.longitude }},
+            year: {{ battle.year }},
+            victor: {{ battle.victor|tojson }},
+            url: {{ url_for('battles.view_battle', id=battle.id)|tojson }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    battles.forEach(function(b) {
+        var icon = franceIcon;
+        if (b.victor === 'russia') icon = russiaIcon;
+        else if (b.victor === 'allies' || b.victor === 'uk') icon = alliesIcon;
+
+        var marker = L.marker([b.lat, b.lng], { icon: icon }).addTo(map);
+        marker.bindPopup('<b><a href="' + b.url + '">' + b.name + '</a></b><br>' + b.year);
+    });
+</script>
+{% endblock %}

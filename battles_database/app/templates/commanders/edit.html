@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block title %}Редактирование: {{ commander.last_name }} {{ commander.first_name }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<style>
+    /* ---------- ФОРМА ---------- */
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--color-mundir);
+        margin-bottom: 4px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #8B1A1A;
+    }
+    .form-control, .form-select {
+        border-color: var(--color-border);
+        border-radius: 4px;
+        font-size: 0.9rem;
+        background: var(--color-white);
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: var(--color-bronze);
+        box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
+    }
+
+    /* ---------- SELECT2 ---------- */
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        padding: 5px;
+        border-color: var(--color-border);
+        border-radius: 4px;
+        background: var(--color-white);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 26px;
+        color: var(--color-mundir);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: var(--color-bronze);
+        box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
+    }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: var(--color-bronze);
+        color: white;
+    }
+
+    /* ---------- СЕКЦИИ ---------- */
+    .form-section {
+        background: var(--color-old-paper);
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        padding: 16px 20px;
+        margin-top: 20px;
+    }
+    .form-section h5 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 700;
+        color: var(--color-mundir);
+        font-size: 1.05rem;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    /* ---------- ЗВАНИЯ ---------- */
+    .rank-entry {
+        padding: 10px 0;
+        border-bottom: 1px dashed var(--color-border);
+    }
+    .rank-entry:last-child {
+        border-bottom: none;
+    }
+
+    /* ---------- КНОПКИ ---------- */
+    .btn-add-row {
+        background: transparent;
+        border: 1px dashed var(--color-bronze);
+        color: var(--color-bronze);
+        font-size: 0.85rem;
+        padding: 4px 14px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+    .btn-add-row:hover:not(:disabled) {
+        background: var(--color-bronze);
+        color: white;
+        border-style: solid;
+    }
+    .btn-add-row:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+    .btn-remove-row {
+        background: transparent;
+        border: 1px solid #8B1A1A;
+        color: #8B1A1A;
+        font-size: 0.8rem;
+        padding: 4px 10px;
+        border-radius: 4px;
+        height: 38px;
+    }
+    .btn-remove-row:hover {
+        background: #8B1A1A;
+        color: white;
+    }
+    .btn-save {
+        background: var(--color-bronze);
+        border: 1px solid var(--color-bronze);
+        color: white;
+        font-weight: 500;
+    }
+    .btn-save:hover {
+        background: #a0750a;
+        border-color: #a0750a;
+        color: white;
+    }
+    .btn-cancel {
+        background: transparent;
+        border: 1px solid var(--color-border);
+        color: var(--color-mundir);
+    }
+    .btn-cancel:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+        color: var(--color-mundir);
+    }
+
+    /* ---------- TEXTAREA ---------- */
+    textarea.form-control {
+        min-height: 100px;
+        resize: vertical;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    Редактирование офицера
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('commanders.list_commanders') }}">Офицеры</a></li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('commanders.view_commander', id=commander.id) }}">
+                            {{ commander.last_name }}
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active">Редактирование</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card detail-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-edit"></i> {{ commander.last_name }} {{ commander.first_name }}
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('commanders.edit_commander', id=commander.id) }}" novalidate id="edit-commander-form">
+                    {% include "partials/_form_errors.html" %}
+
+                    <!-- Фамилия и имя -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label required">Фамилия</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name"
+                                   value="{{ commander.last_name }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">Имя (необязательно)</label>
+                            <input type="text" class="form-control" id="first_name" name="first_name"
+                                   value="{{ commander.first_name or '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Даты -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="birth_date" class="form-label">Дата рождения</label>
+                            <input type="date" class="form-control" id="birth_date" name="birth_date"
+                                   value="{{ commander.birth_date.strftime('%Y-%m-%d') if commander.birth_date else '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="death_date" class="form-label">Дата смерти</label>
+                            <input type="date" class="form-control" id="death_date" name="death_date"
+                                   value="{{ commander.death_date.strftime('%Y-%m-%d') if commander.death_date else '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Страна -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="country_id" class="form-label required">Страна</label>
+                            <select class="form-select select2" id="country_id" name="country_id" required>
+                                <option value="">— Выберите страну —</option>
+                                {% for country in countries %}
+                                    <option value="{{ country.id }}"
+                                        {% if commander.country_id == country.id %}selected{% endif %}>
+                                        {{ country.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- История званий -->
+                    <div class="form-section">
+                        <h5><i class="fas fa-medal" style="color: var(--color-bronze);"></i> История званий</h5>
+                        <div id="ranks-container">
+                            {% for entry in commander_rank_history %}
+                            <div class="rank-entry">
+                                <div class="row g-2 align-items-end">
+                                    <input type="hidden" name="history_entry_ids[]" value="{{ entry.id }}">
+                                    <div class="col-md-5">
+                                        <label class="form-label">Звание</label>
+                                        <select class="form-select rank-select" name="history_rank_ids[]">
+                                            <option value="">— Выберите звание —</option>
+                                            {% for rank in ranks %}
+                                                <option value="{{ rank.id }}"
+                                                    {% if entry.rank_id == rank.id %}selected{% endif %}>
+                                                    {{ rank.rank_name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label">Дата присвоения</label>
+                                        <input type="date" class="form-control" name="history_dates[]"
+                                               value="{{ entry.date_promoted.strftime('%Y-%m-%d') if entry.date_promoted else '' }}">
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="button" class="btn-remove-row btn-remove-rank w-100">Удалить</button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Шаблон нового звания -->
+                        <div id="rank-template" style="display: none;">
+                            <div class="rank-entry">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-5">
+                                        <label class="form-label">Звание</label>
+                                        <select class="form-select rank-select" name="history_rank_ids[]">
+                                            <option value="">— Выберите звание —</option>
+                                            {% for rank in ranks %}
+                                                <option value="{{ rank.id }}">{{ rank.rank_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label">Дата присвоения</label>
+                                        <input type="date" class="form-control" name="history_dates[]">
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="button" class="btn-remove-row btn-remove-rank w-100">Удалить</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-add-row mt-2" id="btn-add-rank"
+                                {% if not commander.country_id %}disabled{% endif %}>
+                            <i class="fas fa-plus"></i> Добавить звание
+                        </button>
+                    </div>
+
+                    <!-- Биография -->
+                    <div class="mb-3 mt-3">
+                        <label for="biography" class="form-label">Биография</label>
+                        <textarea class="form-control" id="biography" name="biography" rows="5">{{ commander.biography or '' }}</textarea>
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('commanders.view_commander', id=commander.id) }}" class="btn btn-cancel">
+                            <i class="fas fa-times"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-save">
+                            <i class="fas fa-save"></i> Сохранить изменения
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/ru.js"></script>
+<script>
+$(document).ready(function() {
+    // ============ SELECT2 ============
+    $('.select2').select2({ language: 'ru', width: '100%' });
+
+    // ============ ЗАГРУЗКА ЗВАНИЙ ПО СТРАНЕ ============
+    $('#country_id').change(function () {
+        const countryId = $(this).val();
+        const container = $('#ranks-container');
+
+        if (countryId) {
+            $('#btn-add-rank').prop('disabled', false);
+
+            container.find('.rank-select').each(function () {
+                const $select = $(this);
+                const currentVal = $select.val();
+                $select.prop('disabled', false).empty()
+                    .append('<option value="">— Загрузка... —</option>');
+
+                $.get("{{ url_for('commanders.get_ranks_api') }}", { country_id: countryId })
+                    .done(function(data) {
+                        $select.empty().append('<option value="">— Выберите звание —</option>');
+                        $.each(data, function(index, rank) {
+                            $select.append($('<option>', {
+                                value: rank.id,
+                                text: rank.name
+                            }));
+                        });
+                        if (currentVal) {
+                            $select.val(currentVal);
+                        }
+                    })
+                    .fail(function() {
+                        $select.empty().append('<option value="">— Ошибка загрузки —</option>');
+                    });
+            });
+        } else {
+            container.find('.rank-select').prop('disabled', true).empty()
+                .append('<option>— Сначала выберите страну —</option>');
+            $('#btn-add-rank').prop('disabled', true);
+        }
+    });
+
+    // ============ ДОБАВЛЕНИЕ ЗВАНИЯ ============
+    $('#btn-add-rank').click(function () {
+        const template = $('#rank-template').html();
+        $('#ranks-container').append(template);
+    });
+
+    // ============ УДАЛЕНИЕ ЗВАНИЯ ============
+    $('#ranks-container').on('click', '.btn-remove-rank', function () {
+        $(this).closest('.rank-entry').remove();
+    });
+
+    // ============ ВАЛИДАЦИЯ ============
+    $('#edit-commander-form').submit(function (e) {
+        let isValid = true;
+
+        $('.is-invalid').removeClass('is-invalid');
+        $('.invalid-feedback').remove();
+
+        $('.required').each(function () {
+            const input = $('#' + $(this).attr('for'));
+            if (!input.val()) {
+                isValid = false;
+                input.addClass('is-invalid');
+                input.after('<div class="invalid-feedback d-block">Это поле обязательно для заполнения</div>');
+            }
+        });
+
+        const birthDate = $('#birth_date').val();
+        const deathDate = $('#death_date').val();
+        if (birthDate && deathDate && new Date(deathDate) < new Date(birthDate)) {
+            isValid = false;
+            $('#death_date').addClass('is-invalid');
+            $('#death_date').after('<div class="invalid-feedback d-block">Дата смерти не может быть раньше даты рождения</div>');
+        }
+
+        // Строка со званием должна иметь выбранное звание, если указана дата
+        $('#ranks-container .rank-entry').each(function () {
+            const $select = $(this).find('select[name="history_rank_ids[]"]');
+            const $date = $(this).find('input[name="history_dates[]"]');
+            if ($date.val() && !$select.val()) {
+                isValid = false;
+                $select.addClass('is-invalid');
+                $select.after('<div class="invalid-feedback d-block">Выберите звание</div>');
+            }
+        });
+
+        if (!isValid) {
+            e.preventDefault();
+            const $first = $('.is-invalid').first();
+            if ($first.length) {
+                $('html, body').animate({ scrollTop: $first.offset().top - 100 }, 200);
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

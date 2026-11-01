@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+
+{% block title %}{{ commander.last_name }} {{ commander.first_name }} — Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+    #officer-map {
+        height: 400px;
+        border-radius: 4px;
+        border: 1px solid var(--color-border);
+    }
+    .officer-portrait-placeholder {
+        width: 120px;
+        height: 140px;
+        background: var(--color-old-paper);
+        border: 2px solid var(--color-border);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: var(--color-ash);
+        flex-shrink: 0;
+    }
+    .officer-header {
+        display: flex;
+        gap: 20px;
+        align-items: start;
+    }
+    .officer-header .officer-title {
+        font-family: 'Playfair Display', serif;
+        font-weight: 700;
+        color: var(--color-mundir);
+        font-size: 1.6rem;
+        line-height: 1.2;
+    }
+    .officer-header .officer-subtitle {
+        font-size: 1rem;
+        color: var(--color-bronze);
+        font-weight: 500;
+        margin-top: 4px;
+    }
+    .officer-header .officer-years {
+        font-size: 0.95rem;
+        color: var(--color-ash);
+        margin-top: 4px;
+    }
+    .command-item .command-unit {
+        font-weight: 500;
+        color: var(--color-mundir);
+    }
+    .battle-participation-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px solid #f0ebe0;
+        font-size: 0.9rem;
+        gap: 10px;
+    }
+    .battle-participation-item:last-child {
+        border-bottom: none;
+    }
+    .battle-participation-item .battle-name {
+        font-weight: 500;
+        color: var(--color-mundir);
+        flex: 1;
+    }
+    .battle-participation-item .battle-date {
+        font-size: 0.85rem;
+        color: var(--color-ash);
+        white-space: nowrap;
+    }
+    .battle-participation-item .battle-role {
+        font-size: 0.8rem;
+        color: var(--color-bronze);
+        white-space: nowrap;
+    }
+
+    /* Карта перемещений */
+    .movement-popup b {
+        color: var(--color-mundir);
+    }
+    .leaflet-popup-content {
+        min-width: 200px;
+    }
+    .date-range {
+        font-weight: bold;
+        color: #495057;
+    }
+
+    /* Кнопки */
+    .btn-edit {
+        background: var(--color-bronze);
+        border-color: var(--color-bronze);
+        color: white;
+    }
+    .btn-edit:hover {
+        background: #a0750a;
+        border-color: #a0750a;
+        color: white;
+    }
+    .btn-delete {
+        background: transparent;
+        border-color: #8B1A1A;
+        color: #8B1A1A;
+    }
+    .btn-delete:hover {
+        background: #8B1A1A;
+        border-color: #8B1A1A;
+        color: white;
+    }
+    .btn-back {
+        background: transparent;
+        border-color: var(--color-border);
+        color: var(--color-mundir);
+    }
+    .btn-back:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    {{ commander.last_name }} {{ commander.first_name }}
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('commanders.list_commanders') }}">Офицеры</a></li>
+                    <li class="breadcrumb-item active">{{ commander.last_name }}</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+
+        <!-- Кнопки управления -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <a href="{{ url_for('commanders.list_commanders') }}" class="btn btn-back">
+                    <i class="fas fa-arrow-left"></i> К списку
+                </a>
+                <a href="{{ url_for('commanders.edit_commander', id=commander.id) }}" class="btn btn-edit" style="margin-left: 8px;">
+                    <i class="fas fa-edit"></i> Редактировать
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+
+            <!-- Левая колонка -->
+            <div class="col-lg-5">
+
+                <!-- Портрет и основная информация -->
+                <div class="card detail-card">
+                    <div class="card-body">
+                        <div class="officer-header">
+                            <div class="officer-portrait-placeholder">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <div class="officer-title">{{ commander.last_name }}<br>{{ commander.first_name }}</div>
+                                {% if commander_rank_history and commander_rank_history|length > 0 %}
+                                    {% set latest_rank = commander_rank_history|sort(attribute='date_promoted', reverse=true)|first %}
+                                    <div class="officer-subtitle">
+                                        {{ latest_rank.rank_name if latest_rank.rank_name else latest_rank.rank if latest_rank.rank else '—' }}
+                                    </div>
+                                {% endif %}
+                                <div class="officer-years">
+                                    <i class="far fa-calendar-alt"></i>
+                                    {{ commander.birth_date.strftime('%Y') if commander.birth_date else '?' }}
+                                    –
+                                    {{ commander.death_date.strftime('%Y') if commander.death_date else '?' }}
+                                </div>
+                                <div style="margin-top: 6px;">
+                                    {% if commander.country %}
+                                        {% set c = commander.country.name|lower %}
+                                        {% if 'франц' in c or 'france' in c %}
+                                            <span class="badge-winner-france">{{ commander.country.name }}</span>
+                                        {% elif 'испан' in c or 'spain' in c %}
+                                            <span class="badge-winner-spain">{{ commander.country.name }}</span>
+                                        {% elif 'португ' in c or 'portug' in c %}
+                                            <span class="badge-winner-portugal">{{ commander.country.name }}</span>
+                                        {% else %}
+                                            <span class="badge-winner-other">{{ commander.country.name }}</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Карта перемещений -->
+                {% if movements %}
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-route"></i> Перемещения
+                    </div>
+                    <div class="card-body">
+                        <div id="officer-map"></div>
+                        <div class="movement-legend">
+                            <span class="legend-item">
+                                <span class="legend-dot" style="background: var(--color-bronze);"></span>
+                                Места пребывания
+                            </span>
+                            <span class="legend-item">
+                                <span class="legend-line" style="background: var(--color-bronze);"></span>
+                                Маршрут
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <!-- Правая колонка -->
+            <div class="col-lg-7">
+
+                <!-- Биография -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-align-left"></i> Биография
+                    </div>
+                    <div class="card-body">
+                        {% if commander.biography %}
+                            <p>{{ commander.biography|nl2br }}</p>
+                        {% else %}
+                            <p class="text-muted">Нет информации</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- История званий -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-medal"></i> История званий
+                    </div>
+                    <div class="card-body">
+                        {% if commander_rank_history %}
+                            <div class="command-timeline">
+                                {% for entry in commander_rank_history|sort(attribute='date_promoted', reverse=true) %}
+                                <div class="command-item">
+                                    <div class="command-rank">
+                                        {{ entry.rank_name if entry.rank_name else entry.rank if entry.rank else '—' }}
+                                    </div>
+                                    <div class="command-date">
+                                        {% if entry.date_promoted %}
+                                            {{ entry.date_promoted.strftime('%d.%m.%Y') }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                        {% if entry.country_name %} · {{ entry.country_name }}{% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Нет записей о повышениях</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Командование подразделениями -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-sitemap"></i> Командование подразделениями
+                    </div>
+                    <div class="card-body">
+                        {% if commander.military_units %}
+                            <div class="command-timeline">
+                                {% for assignment in commander.military_units|sort(attribute='Com_start') %}
+                                <div class="command-item">
+                                    <div class="command-unit">
+                                        {% if assignment.unit %}
+                                            <a href="{{ url_for('units.view_unit', id=assignment.unit.id) }}"
+                                               class="text-decoration-none" style="color: var(--color-mundir);">
+                                                {{ assignment.unit.get_full_hierarchy_name(assignment.Com_start) }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Подразделение не указано</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="command-date">
+                                        {{ assignment.Com_start.strftime('%d.%m.%Y') if assignment.Com_start else '—' }}
+                                        {% if assignment.Com_end %}
+                                            – {{ assignment.Com_end.strftime('%d.%m.%Y') }}
+                                        {% else %}
+                                            – по н.в.
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Нет записей о командовании подразделениями</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Участие в сражениях -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-flag"></i> Участие в сражениях
+                    </div>
+                    <div class="card-body">
+                        {% if commander.battle_participations %}
+                            {% for participation in commander.battle_participations|sort(attribute='battle.date') %}
+                            <div class="battle-participation-item">
+                                <span class="battle-name">
+                                    <a href="{{ url_for('battles.view_battle', id=participation.battle.id) }}"
+                                       class="text-decoration-none" style="color: var(--color-mundir);">
+                                        {{ participation.battle.name }}
+                                    </a>
+                                </span>
+                                <span class="battle-date">
+                                    {{ participation.battle.date.strftime('%d.%m.%Y') if participation.battle.date else '—' }}
+                                </span>
+                                <span class="battle-role">{{ participation.role or '' }}</span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">Не участвовал в сражениях</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Таблица перемещений -->
+        {% if movements %}
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <i class="fas fa-list"></i> История перемещений
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>№</th>
+                                        <th>Местоположение</th>
+                                        <th>Дата</th>
+                                        <th>Примечания</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set grouped_movements = [] %}
+                                    {% for movement in movements %}
+                                        {% set current_place_id = movement.place_obj.id if movement.place_obj else movement.place %}
+                                        {% set last_group = grouped_movements[-1] if grouped_movements else None %}
+                                        {% if not grouped_movements or (last_group.place_obj and last_group.place_obj.id != current_place_id) or (not last_group.place_obj and last_group.place != movement.place) %}
+                                            {% set _ = grouped_movements.append({
+                                                'place_obj': movement.place_obj,
+                                                'place': movement.place,
+                                                'start_date': movement.date,
+                                                'end_date': movement.date,
+                                                'notes': movement.notes,
+                                                'movements': [movement]
+                                            }) %}
+                                        {% else %}
+                                            {% set _ = grouped_movements[-1].update({
+                                                'end_date': movement.date,
+                                                'notes': grouped_movements[-1].notes or movement.notes
+                                            }) %}
+                                            {% set _ = grouped_movements[-1].movements.append(movement) %}
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% for group in grouped_movements %}
+                                    <tr data-movement-group="{{ loop.index }}"
+                                        data-place-id="{{ group.place_obj.id if group.place_obj else 0 }}"
+                                        data-lat="{{ group.place_obj.latitude if group.place_obj and group.place_obj.latitude else 0 }}"
+                                        data-lng="{{ group.place_obj.longitude if group.place_obj and group.place_obj.longitude else 0 }}">
+                                        <td>{{ loop.index }}</td>
+                                        <td>
+                                            {% if group.place_obj %}
+                                                {{ group.place_obj.name }}
+                                            {% else %}
+                                                {{ group.place or 'Неизвестно' }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if group.start_date and group.end_date and group.start_date != group.end_date %}
+                                                {{ group.start_date.strftime('%d.%m.%Y') }} <span class="date-range">–</span> {{ group.end_date.strftime('%d.%m.%Y') }}
+                                            {% elif group.start_date %}
+                                                {{ group.start_date.strftime('%d.%m.%Y') }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ group.notes or '—' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mapElement = document.getElementById('officer-map');
+    if (!mapElement) return;
+
+    const map = L.map('officer-map').setView([50.0, 10.0], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(map);
+
+    const colors = ['#3388ff', '#ff7800', '#38a832', '#9c27b0', '#f44336'];
+    const markersLayer = L.layerGroup().addTo(map);
+    const routesLayer = L.layerGroup().addTo(map);
+
+    const bounds = [];
+    let previousCoords = null;
+    let previousGroupId = null;
+
+    const tableRows = document.querySelectorAll('tr[data-movement-group]');
+    const movementGroups = [];
+
+    tableRows.forEach(row => {
+        const groupId = parseInt(row.getAttribute('data-movement-group'));
+        const lat = parseFloat(row.getAttribute('data-lat'));
+        const lng = parseFloat(row.getAttribute('data-lng'));
+        const cells = row.querySelectorAll('td');
+
+        if (lat && lng && lat !== 0 && lng !== 0) {
+            movementGroups.push({
+                id: groupId,
+                place_obj: {
+                    name: cells[1].textContent.trim(),
+                    latitude: lat,
+                    longitude: lng
+                },
+                start_date: cells[2].textContent.split('–')[0].trim(),
+                end_date: cells[2].textContent.includes('–') ? cells[2].textContent.split('–')[1].trim() : cells[2].textContent.trim(),
+                notes: cells[3].textContent.trim()
+            });
+        }
+    });
+
+    movementGroups.forEach(group => {
+        const groupId = group.id;
+        const coords = [group.place_obj.latitude, group.place_obj.longitude];
+        const color = colors[(groupId - 1) % colors.length];
+        bounds.push(coords);
+
+        const marker = L.marker(coords, { groupId: groupId }).addTo(markersLayer);
+
+        if (previousCoords && previousGroupId !== groupId) {
+            const line = L.polyline([previousCoords, coords], {
+                color: color,
+                weight: 3,
+                opacity: 0.7,
+                dashArray: '8, 12',
+                groupId: groupId
+            }).addTo(routesLayer);
+            line.bindPopup(`
+                <div class="movement-popup">
+                    <b>Маршрут перемещения</b><br>
+                    <b>В:</b> ${group.place_obj.name}<br>
+                    <b>Дата прибытия:</b> ${group.start_date}
+                </div>
+            `);
+        }
+
+        previousCoords = coords;
+        previousGroupId = groupId;
+
+        const popupContent = `
+            <div class="movement-popup">
+                <b>Местоположение #${groupId}</b><br>
+                <b>Место:</b> ${group.place_obj.name}<br>
+                <b>Период:</b> ${group.start_date}${group.end_date !== group.start_date ? ' – ' + group.end_date : ''}<br>
+                ${group.notes && group.notes !== '—' ? '<b>Примечания:</b> ' + group.notes + '<br>' : ''}
+                <b>Координаты:</b> ${group.place_obj.latitude.toFixed(4)}, ${group.place_obj.longitude.toFixed(4)}
+            </div>
+        `;
+        marker.bindPopup(popupContent);
+
+        const row = document.querySelector(`tr[data-movement-group="${groupId}"]`);
+        if (row) {
+            marker.on('mouseover', () => { row.style.backgroundColor = 'rgba(13, 110, 253, 0.1)'; });
+            marker.on('mouseout', () => { row.style.backgroundColor = ''; });
+            row.addEventListener('mouseover', () => { marker.setOpacity(0.8); });
+            row.addEventListener('mouseout', () => { marker.setOpacity(1); });
+        }
+    });
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+    } else {
+        map.setView([50.0, 10.0], 4);
+    }
+
+    L.control.layers({
+        "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        })
+    }, {
+        "Местоположения": markersLayer,
+        "Маршруты": routesLayer
+    }, {collapsed: false}).addTo(map);
+});
+</script>
+{% endblock %}

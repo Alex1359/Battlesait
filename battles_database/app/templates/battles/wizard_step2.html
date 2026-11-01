@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Новое сражение (шаг 2: участники) — Атлас Наполеоновских войн{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<style>
+    /* ---------- ФОРМА ---------- */
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--color-mundir);
+        margin-bottom: 4px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #8B1A1A;
+    }
+    .form-control, .form-select {
+        border-color: var(--color-border);
+        border-radius: 4px;
+        font-size: 0.9rem;
+        background: var(--color-white);
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: var(--color-bronze);
+        box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
+    }
+
+    /* ---------- SELECT2 ---------- */
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        padding: 5px;
+        border-color: var(--color-border);
+        border-radius: 4px;
+        background: var(--color-white);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 26px;
+        color: var(--color-mundir);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: var(--color-bronze);
+        box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
+    }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: var(--color-bronze);
+        color: white;
+    }
+
+    /* ---------- ПРОГРЕСС ---------- */
+    .wizard-progress {
+        margin-top: 16px;
+    }
+    .wizard-progress .progress {
+        height: 5px;
+        background: var(--color-old-paper);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .wizard-progress .progress-bar {
+        background: var(--color-bronze);
+    }
+    .wizard-progress .steps-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-size: 0.85rem;
+    }
+    .wizard-progress .steps-labels span { color: var(--color-ash); }
+    .wizard-progress .steps-labels span.active {
+        color: var(--color-bronze);
+        font-weight: 700;
+        font-family: 'Playfair Display', serif;
+    }
+
+    /* ---------- УЧАСТНИКИ ---------- */
+    .participant-form {
+        background: var(--color-white);
+        border: 1px solid var(--color-border);
+        border-left: 4px solid var(--color-ash);
+        border-radius: 4px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+        transition: border-color 0.2s;
+    }
+    .participant-form.side-france   { border-left-color: #1A2A3A; }
+    .participant-form.side-allies   { border-left-color: #2D6A2D; }
+    .participant-form.side-other    { border-left-color: #8C8C8C; }
+
+    /* ---------- КНОПКИ ---------- */
+    .btn-add-row {
+        background: transparent;
+        border: 1px dashed var(--color-bronze);
+        color: var(--color-bronze);
+        font-size: 0.85rem;
+        padding: 6px 16px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+    .btn-add-row:hover {
+        background: var(--color-bronze);
+        color: white;
+        border-style: solid;
+    }
+    .btn-remove-row {
+        background: transparent;
+        border: 1px solid #8B1A1A;
+        color: #8B1A1A;
+        font-size: 0.8rem;
+        padding: 4px 10px;
+        border-radius: 4px;
+        height: 38px;
+        width: 100%;
+    }
+    .btn-remove-row:hover {
+        background: #8B1A1A;
+        color: white;
+    }
+    .btn-next {
+        background: var(--color-bronze);
+        border: 1px solid var(--color-bronze);
+        color: white;
+        font-weight: 500;
+        padding: 8px 24px;
+    }
+    .btn-next:hover {
+        background: #a0750a;
+        border-color: #a0750a;
+        color: white;
+    }
+    .btn-back {
+        background: transparent;
+        border: 1px solid var(--color-border);
+        color: var(--color-mundir);
+    }
+    .btn-back:hover {
+        background: var(--color-old-paper);
+        border-color: var(--color-bronze);
+        color: var(--color-mundir);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 style="font-family: 'Playfair Display', serif; font-weight: 700;">
+                    Участники сражения
+                </h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('battles.list_battles') }}">Сражения</a></li>
+                    <li class="breadcrumb-item active">Новое (2/3)</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card detail-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-users"></i> Шаг 2: Участники
+                </h3>
+                <div class="wizard-progress">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 66%"
+                             aria-valuenow="66" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="steps-labels">
+                        <span>1. Основная информация</span>
+                        <span class="active">2. Участники</span>
+                        <span>3. Потери и трофеи</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('battles.new_battle_step2') }}" novalidate id="step2-form">
+                    <input type="hidden" name="step" value="2">
+                    {% include "partials/_form_errors.html" %}
+
+                    <div id="participants-container">
+                        {% if participationss %}
+                            {% for p in participationss %}
+                                {% set index = loop.index0 %}
+                                <div class="participant-form side-other" data-index="{{ index }}">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-3 mb-2">
+                                            <label class="form-label required">Страна</label>
+                                            <select name="participations-{{ index }}-country_id"
+                                                    class="form-select country-select" required>
+                                                <option value="">— Выберите страну —</option>
+                                                {% for country in countries %}
+                                                    <option value="{{ country.id }}"
+                                                        {% if p.country_id|string == country.id|string %}selected{% endif %}>
+                                                        {{ country.name }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3 mb-2">
+                                            <label class="form-label required">Подразделение</label>
+                                            <select name="participations-{{ index }}-unit_id"
+                                                    class="form-select unit-select" required>
+                                                <option value="">— Выберите подразделение —</option>
+                                                {% for unit in units if not p.country_id or p.country_id|string == unit.country_id|string %}
+                                                    <option value="{{ unit.id }}"
+                                                        {% if p.unit_id|string == unit.id|string %}selected{% endif %}>
+                                                        {{ unit.name }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3 mb-2">
+                                            <label class="form-label">Командующий</label>
+                                            <select name="participations-{{ index }}-commander_id"
+                                                    class="form-select commander-select">
+                                                <option value="">— Не указан —</option>
+                                                {% for commander in commanders if not p.country_id or p.country_id|string == commander.country_id|string %}
+                                                    <option value="{{ commander.id }}"
+                                                        {% if p.commander_id|string == commander.id|string %}selected{% endif %}>
+                                                        {{ commander.last_name }} {{ commander.first_name }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3 mb-2">
+                                            <button type="button" class="btn-remove-row remove-participant">
+                                                <i class="fas fa-times"></i> Удалить
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center py-3 mb-0">
+                                <i class="fas fa-info-circle"></i> Участники ещё не добавлены
+                            </p>
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="btn-add-row mt-2" id="add-participant-btn">
+                        <i class="fas fa-plus"></i> Добавить участника
+                    </button>
+
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('battles.new_battle') }}" class="btn btn-back">
+                            <i class="fas fa-arrow-left"></i> Назад
+                        </a>
+                        <button type="submit" class="btn btn-next">
+                            Далее <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/ru.js"></script>
+<script>
+$(document).ready(function() {
+    // ============ ДАННЫЕ ДЛЯ JS ============
+    const allUnits = [
+        {% for unit in units %}
+        { id: {{ unit.id }}, name: {{ unit.name|tojson }}, country_id: {{ unit.country_id or 'null' }} }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    const allCommanders = [
+        {% for c in commanders %}
+        { id: {{ c.id }}, name: {{ (c.last_name ~ ' ' ~ (c.first_name or ''))|trim|tojson }}, country_id: {{ c.country_id or 'null' }} }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // ============ SELECT2 ============
+    function initSelects(scope) {
+        $(scope).find('.country-select, .unit-select, .commander-select').each(function() {
+            if (!$(this).hasClass('select2-hidden-accessible')) {
+                $(this).select2({ language: 'ru', width: '100%' });
+            }
+        });
+    }
+    initSelects(document);
+
+    // ============ ФИЛЬТРАЦИЯ ПОДРАЗДЕЛЕНИЙ И КОМАНДИРОВ ПО СТРАНЕ ============
+    function refreshSelectsByCountry($row) {
+        const countryId = $row.find('.country-select').val();
+        const $unitSelect = $row.find('.unit-select');
+        const $commanderSelect = $row.find('.commander-select');
+        const currentUnit = $unitSelect.val();
+        const currentCommander = $commanderSelect.val();
+
+        $unitSelect.empty().append('<option value="">— Выберите подразделение —</option>');
+        allUnits.forEach(function(u) {
+            if (!countryId || String(u.country_id) === String(countryId)) {
+                $unitSelect.append($('<option>', { value: u.id, text: u.name }));
+            }
+        });
+        if (currentUnit) $unitSelect.val(currentUnit);
+
+        $commanderSelect.empty().append('<option value="">— Не указан —</option>');
+        allCommanders.forEach(function(c) {
+            if (!countryId || String(c.country_id) === String(countryId)) {
+                $commanderSelect.append($('<option>', { value: c.id, text: c.name }));
+            }
+        });
+        if (currentCommander) $commanderSelect.val(currentCommander);
+
+        $unitSelect.trigger('change.select2');
+        $commanderSelect.trigger('change.select2');
+
+        // Цвет рамки по стране
+        updateSideColor($row);
+    }
+
+    function updateSideColor($row) {
+        const countryId = $row.find('.country-select').val();
+        $row.removeClass('side-france side-allies side-other');
+        if (!countryId) {
+            $row.addClass('side-other');
+            return;
+        }
+        // Определяем по названию страны (France → france, остальные → allies)
+        const $opt = $row.find('.country-select option:selected');
+        const countryName = ($opt.text() || '').toLowerCase();
+        if (countryName.includes('франц') || countryName.includes('france')) {
+            $row.addClass('side-france');
+        } else {
+            $row.addClass('side-allies');
+        }
+    }
+
+    $(document).on('change', '.country-select', function() {
+        refreshSelectsByCountry($(this).closest('.participant-form'));
+    });
+
+    // При инициализации — обновим цвета и подгрузим фильтры
+    $('.participant-form').each(function() {
+        refreshSelectsByCountry($(this));
+    });
+
+    // ============ ДОБАВЛЕНИЕ УЧАСТНИКА ============
+    let participantIndex = {{ participationss|length if participationss else 0 }};
+
+    $('#add-participant-btn').on('click', function() {
+        const index = participantIndex++;
+        const $row = $(`
+            <div class="participant-form side-other" data-index="${index}">
+                <div class="row align-items-end">
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label required">Страна</label>
+                        <select name="participations-${index}-country_id" class="form-select country-select" required>
+                            <option value="">— Выберите страну —</option>
+                            {% for country in countries %}
+                                <option value="{{ country.id }}">{{ country.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label required">Подразделение</label>
+                        <select name="participations-${index}-unit_id" class="form-select unit-select" required>
+                            <option value="">— Выберите подразделение —</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Командующий</label>
+                        <select name="participations-${index}-commander_id" class="form-select commander-select">
+                            <option value="">— Не указан —</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <button type="button" class="btn-remove-row remove-participant">
+                            <i class="fas fa-times"></i> Удалить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `);
+        $('#participants-container').append($row);
+        initSelects($row);
+    });
+
+    // ============ УДАЛЕНИЕ УЧАСТНИКА ============
+    $(document).on('click', '.remove-participant', function() {
+        $(this).closest('.participant-form').remove();
+    });
+
+    // ============ ВАЛИДАЦИЯ ============
+    $('#step2-form').on('submit', function(e) {
+        let isValid = true;
+        $('.is-invalid').removeClass('is-invalid');
+        $('.invalid-feedback').remove();
+
+        $('.participant-form').each(function() {
+            $(this).find('.required').each(function() {
+                const $select = $(this).next('select');
+                // Найти select внутри того же col
+                const $col = $(this).closest('.col-md-3');
+                const $sel = $col.find('select');
+                if (!$sel.val()) {
+                    isValid = false;
+                    $sel.addClass('is-invalid');
+                    $sel.after('<div class="invalid-feedback d-block">Это поле обязательно</div>');
+                }
+            });
+        });
+
+        if (!isValid) {
+            e.preventDefault();
+            const first = document.querySelector('.is-invalid');
+            if (first) window.scrollTo({ top: first.offsetTop - 100, behavior: 'smooth' });
+        }
+    });
+});
+</script>
+{% endblock %}
