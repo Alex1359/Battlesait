@@ -10,3 +10,4 @@ marshmallow==3.21.2
 gunicorn==22.0.0
 geoalchemy2==0.15.2
 wsproto==1.2.0
+python-dateutil==2.9.0.post0
